@@ -3,305 +3,198 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ritualnet Map</title>
+  <title>RITUALNET</title>
 
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"/>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@600&display=swap');
 
     * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      margin: 0;
-      background: #000;
-      color: #0f0;
-      font-family: 'Rajdhani', sans-serif;
-      overflow: hidden;
-      height: 100vh;
-    }
-    #map { position: absolute; top:0; left:0; width:100%; height:100%; z-index:1; }
+    body { margin:0; background:#000; color:#0f0; font-family:'Rajdhani',sans-serif; overflow:hidden; height:100vh; }
+    #map { position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; }
 
     /* Header */
     .header {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 80px;
-      background: linear-gradient(to bottom, rgba(0,30,0,0.95), transparent);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-      border-bottom: 1px solid #00ff4144;
+      position:absolute; top:0; left:0; right:0; height:80px;
+      background:linear-gradient(to bottom,rgba(0,30,0,0.95),transparent);
+      display:flex; align-items:center; justify-content:center; z-index:10;
+      border-bottom:1px solid #00ff4144;
     }
     .logo {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 42px;
-      font-weight: 900;
-      color: #00ff41;
-      text-shadow: 0 0 30px #00ff41, 0 0 60px #00ff4188;
-      letter-spacing: 6px;
+      font-family:'Orbitron',sans-serif; font-size:44px; font-weight:900;
+      color:#00ff41; text-shadow:0 0 30px #00ff41, 0 0 60px #00ff4188; letter-spacing:6px;
     }
 
-    /* Summon Button */
-    .summon-btn {
-      position: absolute;
-      bottom: 40px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #000;
-      color: #00ff41;
-      border: 3px solid #00ff41;
-      padding: 20px 70px;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 26px;
-      font-weight: 900;
-      border-radius: 60px;
-      cursor: pointer;
-      box-shadow: 0 0 50px #00ff4188;
-      z-index: 10;
-      animation: pulse 3s infinite;
-      transition: all 0.4s;
-    }
-    .summon-btn:hover { transform: translateX(-50%) scale(1.15); box-shadow: 0 0 80px #00ff41; }
-
-    @keyframes pulse { 0%,100% { box-shadow: 0 0 50px #00ff4188; } 50% { box-shadow: 0 0 90px #00ff41; } }
-
-    /* Modal Card */
+    /* Ritual Card Modal */
     .modal {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.95);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      backdrop-filter: blur(10px);
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.97); backdrop-filter:blur(12px);
+      display:none; align-items:center; justify-content:center; z-index:100;
     }
     .card {
-      width: 420px;
-      background: #000;
-      border: 2px solid #00ff41;
-      border-radius: 20px;
-      padding: 30px;
-      box-shadow: 0 0 60px rgba(0,255,65,0.6);
-      text-align: center;
-      animation: cardPop 0.6s ease-out;
+      width:440px; background:#000; border:3px solid #00ff41; border-radius:24px;
+      padding:35px; box-shadow:0 0 80px rgba(0,255,65,0.7); text-align:center;
+      animation:pop 0.6s ease-out;
     }
-    @keyframes cardPop { from { transform: scale(0.7); opacity:0; } to { transform: scale(1); opacity:1; } }
+    @keyframes pop { from{transform:scale(0.6);opacity:0} to{transform:scale(1);opacity:1} }
 
     .card h2 {
-      font-family: 'Orbitron', sans-serif;
-      color: #00ff41;
-      font-size: 28px;
-      text-shadow: 0 0 20px #00ff41;
-      margin-bottom: 20px;
+      font-family:'Orbitron',sans-serif; color:#00ff41; font-size:32px;
+      text-shadow:0 0 20px #00ff41; margin-bottom:25px; letter-spacing:3px;
     }
-    input, textarea {
-      width: 100%;
-      padding: 14px;
-      margin: 12px 0;
-      background: #001100;
-      border: 1px solid #00ff41;
-      border-radius: 12px;
-      color: #0f0;
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 16px;
-    }
-    textarea { height: 100px; resize: none; }
 
     .pfp-preview {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      border: 4px solid #00ff41;
-      margin: 15px auto;
-      object-fit: cover;
-      box-shadow: 0 0 40px #00ff4188;
+      width:140px; height:140px; border-radius:50%; object-fit:cover;
+      border:5px solid #00ff41; margin:20px auto; box-shadow:0 0 50px #00ff4188;
     }
 
     .file-label {
-      display: block;
-      padding: 14px;
-      background: #001100;
-      border: 2px dashed #00ff41;
-      border-radius: 12px;
-      cursor: pointer;
-      margin: 15px 0;
-      transition: 0.3s;
+      display:block; padding:16px; background:#001100; border:2px dashed #00ff41;
+      border-radius:14px; cursor:pointer; margin:20px 0; transition:0.3s;
     }
-    .file-label:hover { background: #002200; }
+    .file-label:hover { background:#002200; }
+
+    input, textarea {
+      width:100%; padding:16px; margin:14px 0; background:#001100;
+      border:1px solid #00ff41; border-radius:12px; color:#0f0; font-size:16px;
+    }
+    textarea { height:110px; resize:none; }
 
     .submit-btn {
-      background: #00ff41;
-      color: #000;
-      border: none;
-      padding: 16px 40px;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 20px;
-      font-weight: bold;
-      border-radius: 50px;
-      cursor: pointer;
-      margin-top: 20px;
-      box-shadow: 0 0 30px #00ff41;
+      background:#00ff41; color:#000; border:none; padding:18px 50px;
+      font-family:'Orbitron',sans-serif; font-size:22px; font-weight:900;
+      border-radius:50px; cursor:pointer; margin-top:20px;
+      box-shadow:0 0 40px #00ff41; transition:0.3s;
     }
+    .submit-btn:hover { transform:scale(1.1); box-shadow:0 0 70px #00ff41; }
 
     /* Recent Summonings */
-    .summonings-panel {
-      position: absolute;
-      left: 20px;
-      bottom: 120px;
-      width: 380px;
-      background: rgba(0,15,0,0.95);
-      border: 1px solid #00ff41;
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 0 40px rgba(0,255,65,0.4);
-      z-index: 10;
+    .panel {
+      position:absolute; left:20px; bottom:30px; width:400px;
+      background:rgba(0,15,0,0.95); border:1px solid #00ff41; border-radius:18px;
+      padding:22px; box-shadow:0 0 50px rgba(0,255,65,0.4); z-index:10;
     }
-    .title { font-family: 'Orbitron', sans-serif; color: #00ff41; font-size: 22px; text-shadow: 0 0 15px; margin-bottom: 16px; }
-    .summoning {
-      display: flex;
-      align-items: center;
-      margin-bottom: 16px;
-      padding: 10px;
-      background: rgba(0,255,65,0.05);
-      border-left: 4px solid #00ff41;
-      border-radius: 0 10px 10px 0;
+    .panel h3 {
+      font-family:'Orbitron',sans-serif; color:#00ff41; font-size:24px;
+      text-shadow:0 0 15px #00ff41; margin-bottom:18px;
     }
-    .summoning img { width: 50px; height: 50px; border-radius: 50%; border: 3px solid #00ff41; margin-right: 14px; box-shadow: 0 0 25px #00ff4188; }
-    .username { color: #00ff88; font-weight: bold; font-family: 'Orbitron', sans-serif; }
+    .summon {
+      display:flex; align-items:center; margin-bottom:18px;
+      padding:12px; background:rgba(0,255,65,0.05); border-left:5px solid #00ff41;
+      border-radius:0 12px 12px 0;
+    }
+    .summon img { width:56px; height:56px; border-radius:50%; border:3px solid #00ff41; margin-right:16px; box-shadow:0 0 30px #00ff4188; }
+    .summon .user { color:#00ff88; font-weight:bold; font-family:'Orbitron',sans-serif; }
 
-    /* Avatar glow */
-    .ritual-marker img {
-      filter: drop-shadow(0 0 25px #00ff41);
-      animation: glow 4s ease-in-out infinite alternate;
+    /* Marker glow */
+    .glow-marker img {
+      filter:drop-shadow(0 0 30px #00ff41);
+      animation:glow 4s ease-in-out infinite alternate;
     }
-    @keyframes glow { from { filter: drop-shadow(0 0 20px #00ff41); } to { filter: drop-shadow(0 0 40px #00ff41); } }
+    @keyframes glow { from{filter:drop-shadow(0 0 25px #00ff41)} to{filter:drop-shadow(0 0 50px #00ff41)} }
   </style>
 </head>
 <body>
 
   <div id="map"></div>
 
-  <div class="header">
-    <div class="logo">RITUALNET</div>
+  <div class="header"><div class="logo">RITUALNET</div></div>
+
+  <!-- Recent Summonings Panel -->
+  <div class="panel">
+    <h3>Recent Summonings</h3>
+    <div id="recentList"></div>
   </div>
 
-  <button class="summon-btn" id="summonBtn">SUMMON ON MAP</button>
-
-  <!-- Recent Summonings -->
-  <div class="summonings-panel">
-    <div class="title">Recent Summonings</div>
-    <div id="summoningsList"></div>
-  </div>
-
-  <!-- Modal Card -->
-  <div class="modal" id="summonModal">
+  <!-- Ritual Card Modal -->
+  <div class="modal" id="ritualModal">
     <div class="card">
       <h2>PERFORM THE RITUAL</h2>
-      <img src="" alt="PFP Preview" class="pfp-preview" id="pfpPreview">
-      <label class="file-label">Upload Your Avatar</label>
-      <input type="file" id="pfpInput" accept="image/*" style="display:none;">
-      
-      <input type="text" id="usernameInput" placeholder="X / Twitter username (e.g. vitalik)">
-      <textarea id="pledgeInput" placeholder="Speak your pledge to the Ritualnet..."></textarea>
-      
-      <button class="submit-btn" id="submitRitual">JOIN THE CIRCLE</button>
+      <img src="" alt="Your Avatar" class="pfp-preview" id="preview">
+      <label class="file-label">UPLOAD YOUR AVATAR</label>
+      <input type="file" id="pfpFile" accept="image/*" style="display:none;">
+
+      <input type="text" id="xUsername" placeholder="X / Twitter username" autocomplete="off">
+      <textarea id="pledge" placeholder="Speak your pledge to the Ritualnet..."></textarea>
+
+      <button class="submit-btn">JOIN THE CIRCLE</button>
     </div>
   </div>
 
   <script>
-    const map = L.map('map').setView([20, 0], 2);
+    const map = L.map('map').setView([10, 0], 2);
     L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: ''
+      maxZoom: 19, attribution: ''
     }).addTo(map);
 
     const markers = L.layerGroup().addTo(map);
-    const list = document.getElementById('summoningsList');
+    const recentList = document.getElementById('recentList');
     let summonings = [];
-    let selectedLatLng = null;
+    let clickedLatLng = null;
 
-    // Open modal when clicking summon button
-    document.getElementById('summonBtn').onclick = () => {
-      document.getElementById('summonModal').style.display = 'flex';
-      alert("Now click anywhere on the map to choose your summoning location...");
-      
-      const clickHandler = (e) => {
-        selectedLatLng = e.latlng;
-        map.off('click', clickHandler);
-      };
-      map.once('click', clickHandler);
-    };
+    // Click anywhere → open ritual card
+    map.on('click', (e) => {
+      clickedLatLng = e.latlng;
+      document.getElementById('ritualModal').style.display = 'flex';
+      document.getElementById('preview').src = '';
+      document.getElementById('xUsername').value = '';
+      document.getElementById('pledge').value = '';
+    });
 
-    // PFP Upload Preview
-    document.getElementById('pfpInput').onchange = (e) => {
+    // PFP preview
+    document.getElementById('pfpFile').onchange = (e) => {
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = (ev) => {
-          document.getElementById('pfpPreview').src = ev.target.result;
-        };
+        reader.onload = (ev) => document.getElementById('preview').src = ev.target.result;
         reader.readAsDataURL(file);
       }
     };
+    document.querySelector('.file-label').onclick = () => document.getElementById('pfpFile').click();
 
-    // Trigger file input
-    document.querySelector('.file-label').onclick = () => {
-      document.getElementById('pfpInput').click();
-    };
+    // Submit ritual
+    document.querySelector('.submit-btn').onclick = () => {
+      const pfp = document.getElementById('preview').src;
+      const username = document.getElementById('xUsername').value.trim() || "ritualist";
+      const pledge = document.getElementById('pledge').value.trim() || "I have entered the circle.";
 
-    // Submit Ritual
-    document.getElementById('submitRitual').onclick = () => {
-      const username = document.getElementById('usernameInput').value.trim() || "ritualist";
-      const pledge = document.getElementById('pledgeInput').value.trim() || "I have joined the circle.";
-      const pfpSrc = document.getElementById('pfpPreview').src;
+      if (!pfp || pfp.includes('data:') === false) return alert("Please upload your avatar");
+      if (!clickedLatLng) return;
 
-      if (!selectedLatLng) return alert("Please select a location on the map first.");
-      if (pfpSrc.includes('data:image') === false) return alert("Please upload your avatar.");
-
-      // Create marker
+      // Create glowing marker
       const icon = L.divIcon({
-        className: 'ritual-marker',
-        html: `<img src="${pfpSrc}" style="width:64px;height:64px;border-radius:50%;border:4px solid #00ff41;">`,
-        iconSize: [64, 64],
-        iconAnchor: [32, 64]
+        className: 'glow-marker',
+        html: `<img src="${pfp}" style="width:68px;height:68px;border-radius:50%;border:5px solid #00ff41;">`,
+        iconSize: [68,68], iconAnchor: [34,68]
       });
 
-      const marker = L.marker(selectedLatLng, { icon }).addTo(markers);
+      const marker = L.marker(clickedLatLng, { icon }).addTo(markers);
       marker.bindPopup(`
-        <div style="background:#000;color:#0f0;padding:15px;border:2px solid #0f0;border-radius:12px;text-align:center;">
-          <img src="${pfpSrc}" width="70" style="border-radius:50%;border:3px solid #0f0;margin-bottom:10px;">
+        <div style="background:#000;color:#0f0;padding:16px;border:2px solid #0f0;border-radius:14px;text-align:center;">
+          <img src="${pfp}" width="80" style="border-radius:50%;border:4px solid #0f0;margin-bottom:10px;">
           <br><b style="color:#00ff41;">@${username}</b>
           <br><i>"${pledge}"</i>
         </div>
       `).openPopup();
 
       // Add to recent
-      summonings.push({ username, pledge, pfp: pfpSrc });
+      summonings.push({ username, pledge, pfp });
       if (summonings.length > 3) summonings.shift();
 
-      list.innerHTML = '';
+      recentList.innerHTML = '';
       summonings.slice().reverse().forEach(s => {
         const div = document.createElement('div');
-        div.className = 'summoning';
-        div.innerHTML = `<img src="${s.pfp}"><div><div class="username">@${s.username}</div>"${s.pledge}"</div>`;
-        list.appendChild(div);
+        div.className = 'summon';
+        div.innerHTML = `<img src="${s.pfp}"><div><div class="user">@${s.username}</div>"${s.pledge}"</div>`;
+        recentList.appendChild(div);
       });
 
-      // Close modal
-      document.getElementById('summonModal').style.display = 'none';
-      document.getElementById('pfpPreview').src = '';
-      document.getElementById('usernameInput').value = '';
-      document.getElementById('pledgeInput').value = '';
-      selectedLatLng = null;
-
-      map.setView(selectedLatLng, 8, { animate: true });
+      // Close modal & zoom
+      document.getElementById('ritualModal').style.display = 'none';
+      map.setView(clickedLatLng, 9, { animate: true });
+      clickedLatLng = null;
     };
   </script>
 </body>

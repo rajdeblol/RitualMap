@@ -41,10 +41,13 @@
       font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;cursor:pointer;box-shadow:0 0 60px #00ff41;transition:0.4s;}
     .join-btn:hover{transform:scale(1.1);box-shadow:0 0 100px #00ff41;}
 
+    /* BEAUTIFUL RITUALIZED ANIMATION */
     .success{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:none;align-items:center;justify-content:center;
-      flex-direction:column;z-index:300;color:#00ff41;text-align:center;}
-    .success h1{font-family:'Orbitron',sans-serif;font-size:70px;text-shadow:0 0 60px #00ff41;animation:pulse 2s infinite;}
-    @keyframes pulse{0%,100%{text-shadow:0 0 60px #00ff41}50%{text-shadow:0 0 120px #00ff41}}
+      flex-direction:column;z-index:300;color:#00ff41;text-align:center;animation:fadeIn 1s;}
+    .success h1{font-family:'Orbitron',sans-serif;font-size:80px;text-shadow:0 0 60px #00ff41;animation:pulseGlow 3s infinite;}
+    .success p{font-size:28px;opacity:0.9;margin-top:20px;}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes pulseGlow{0%,100%{text-shadow:0 0 60px #00ff41}50%{text-shadow:0 0 120px #00ff41,0 0 160px #00ff41}}
 
     .panel{position:absolute;left:20px;bottom:30px;width:420px;background:#000;border:3px solid #00ff41;border-radius:25px;
       padding:25px;box-shadow:0 0 80px rgba(0,255,65,0.6);z-index:10;}
@@ -89,8 +92,8 @@
   </div>
 
   <script>
-    // GLOBAL DATA (free, instant, no signup)
-    const DATA_URL = "https://api.jsonbin.io/v3/b/673c3d6aad19ca34f8b5b5e3"; // Public bin - everyone reads/writes
+    // GLOBAL DATA - INSTANT & RELIABLE (free tiiny.host)
+    const DATA_URL = "https://ritualnet.tiiny.site/data.json";
 
     const map = L.map('map', { zoomControl: false }).setView([10, 0], 2);
     L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png').addTo(map);
@@ -110,9 +113,8 @@
 
     async function loadAll() {
       try {
-        const res = await fetch(DATA_URL + "/latest");
-        const json = await res.json();
-        const data = json.record || [];
+        const res = await fetch(DATA_URL + "?_=" + Date.now());
+        const data = await res.json();
         markers.clearLayers(); recent.innerHTML = '';
         data.slice(-50).reverse().forEach(s => {
           const icon = createIcon(s.avatar);
@@ -125,7 +127,7 @@
       } catch(e) {}
     }
     loadAll();
-    setInterval(loadAll, 8000);
+    setInterval(loadAll, 6000); // refresh every 6 seconds
 
     map.on('click', e => {
       clickedPos = e.latlng;
@@ -158,12 +160,16 @@
 
       const newEntry = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, time: Date.now() };
 
-      // INSTANT WRITE - works every time
-      await fetch(DATA_URL, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify([...(await (await fetch(DATA_URL + "/latest")).json()).record || [], newEntry])
-      });
+      // INSTANT GLOBAL WRITE (tiiny.host + cors proxy)
+      await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(DATA_URL), { method: "GET" })
+        .then(r => r.json())
+        .then(oldData => {
+          const updated = [...(oldData || []), newEntry];
+          return fetch("https://tiiny.host/api/v1/upload", {
+            method: "POST",
+            body: JSON.stringify({ file: "data.json", content: JSON.stringify(updated) })
+          });
+        });
 
       loadAll();
       closeModal();
@@ -171,7 +177,7 @@
       setTimeout(() => {
         document.getElementById('success').style.display = 'none';
         map.setView(clickedPos, 10, { animate: true });
-      }, 3000);
+      }, 3500);
     };
   </script>
 </body>

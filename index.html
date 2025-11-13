@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RITUAL NET: GLOBAL ALTAR</title>
+
+  <!-- Leaflet.js for Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Google Fonts: Creepster (ritual vibe) -->
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      color: #f00;
+      font-family: 'UnifrakturMaguntia', cursive;
+      overflow: hidden;
+      height: 100vh;
+      background: radial-gradient(circle at center, #110000 0%, #000 70%);
+    }
+
+    /* ===== HEADER ===== */
+    #header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      padding: 15px;
+      text-align: center;
+      z-index: 1000;
+      background: rgba(0,0,0,0.8);
+      border-bottom: 2px solid #300;
+    }
+    #header h1 {
+      font-family: 'Creepster', cursive;
+      font-size: 2.5rem;
+      color: #f00;
+      text-shadow: 0 0 20px #f00, 0 0 40px #900;
+      animation: pulse 3s infinite;
+    }
+    #counter {
+      font-size: 1.2rem;
+      color: #faa;
+      margin-top: 5px;
+      animation: flicker 2s infinite;
+    }
+
+    /* ===== MAP CONTAINER ===== */
+    #map {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 1;
+    }
+
+    /* ===== MODAL (Pledge Flow) ===== */
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s;
+    }
+    .modal.active { opacity: 1; pointer-events: all; }
+
+    .modal-content {
+      background: #111;
+      border: 3px double #500;
+      padding: 30px;
+      width: 90%;
+      max-width: 500px;
+      border-radius: 15px;
+      text-align: center;
+      box-shadow: 0 0 30px #f00;
+      animation: float 6s infinite ease-in-out;
+    }
+
+    .glitch-img {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      filter: contrast(150%) brightness(120%);
+      animation: glitch 1.5s infinite;
+      box-shadow: 0 0 20px #f00;
+      margin: 20px auto;
+      display: block;
+    }
+
+    .pledge-text {
+      background: #000;
+      color: #f00;
+      border: 2px solid #500;
+      padding: 15px;
+      font-family: '-creepster', cursive;
+      font-size: 1.1rem;
+      width: 100%;
+      height: 120px;
+      resize: none;
+      margin: 20px 0;
+    }
+
+    button {
+      background: #300;
+      color: #f00;
+      border: 2px solid #f00;
+      padding: 12px 30px;
+      font-family: 'Creepster', cursive;
+      font-size: 1.3rem;
+      cursor: pointer;
+      margin: 10px;
+      transition: all 0.3s;
+      text-shadow: 0 0 10px #f00;
+    }
+    button:hover {
+      background: #f00;
+      color: #000;
+      box-shadow: 0 0 20px #f00;
+      transform: scale(1.05);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes pulse {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 1; text-shadow: 0 0 30px #f00; }
+    }
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-15px); }
+    }
+    @keyframes glitch {
+      0%, 100% { clip-path: inset(0 0 0 0); }
+      20% { clip-path: inset(10% 0 80% 0); }
+      40% { clip-path: inset(80% 0 10% 0); }
+      60% { clip-path: inset(30% 0 60% 0); }
+    }
+    @keyframes bloodBloom {
+      0% { transform: scale(0); opacity: 1; }
+      100% { transform: scale(3); opacity: 0; }
+    }
+
+    /* Blood Bloom Effect */
+    .blood-bloom {
+      position: absolute;
+      width: 60px; height: 60px;
+      background: radial-gradient(circle, #f00 10%, #900 40%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: bloodBloom 1.5s ease-out forwards;
+      z-index: 999;
+    }
+
+    /* Custom Cursor */
+    body { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="%23f00" opacity="0.8"/><circle cx="10" cy="10" r="3" fill="%23fff"/></svg>'), auto; }
+
+    /* Leaflet Overrides */
+    .leaflet-popup-content {
+      background: #000;
+      color: #f00;
+      border: 2px solid #500;
+      font-family: 'Creepster', cursive;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div id="header">
+    <h1>RITUAL NET: GLOBAL ALTAR</h1>
+    <div id="counter">0.0000% of Earth claimed</div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map"></div>
+
+  <!-- PLEDGE MODAL -->
+  <div id="pledgeModal" class="modal">
+    <div class="modal-content">
+      <h2>STEP 1: OFFER YOUR NAME</h2>
+      <button id="connectX">CONNECT @X</button>
+
+      <div id="userInfo" style="display:none;">
+        <img id="pfp" class="glitch-img" src="" alt="PFP" />
+        <p><strong>@<span id="username"></span></strong></p>
+
+        <h2>STEP 2: TAKE THE PLEDGE</h2>
+        <p><em>Type the oath below. No copy-paste.</em></p>
+        <textarea id="pledgeInput" class="pledge-text" placeholder="I, @yourname, surrender my feed..."></textarea>
+        <button id="vowBtn" disabled>VOW</button>
+
+        <h2>STEP 3: MARK YOUR TERRITORY</h2>
+        <button id="pinBtn" disabled>DROP PIN</button>
+      </div>
+
+      <div id="success" style="display:none;">
+        <h2>YOU ARE A NODE.</h2>
+        <p>Your summon link:</p>
+        <input type="text" id="summonLink" readonly style="width:100%; padding:8px; background:#000; color:#f00; border:1px solid #500;" />
+        <button onclick="copyLink()">COPY LINK</button>
+        <button id="closeModal">CLOSE ALTAR</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== MAP SETUP =====
+    const map = L.map('map').setView([20, 0], 2);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Dark ritual style
+    map.getContainer().style.filter = 'invert(1) hue-rotate(180deg) contrast(1.5)';
+
+    // Fake user database (in real app: backend)
+    let users = JSON.parse(localStorage.getItem('ritualUsers')) || [];
+    let totalClaimed = users.length;
+    updateCounter();
+
+    // Load existing pins
+    users.forEach(u => addPin(u.lat, u.lng, u.username, u.pfp));
+
+    // ===== MODAL CONTROL =====
+    const modal = document.getElementById('pledgeModal');
+    const connectBtn = document.getElementById('connectX');
+    const userInfo = document.getElementById('userInfo');
+    const pledgeInput = document.getElementById('pledgeInput');
+    const vowBtn = document.getElementById('vowBtn');
+    const pinBtn = document.getElementById('pinBtn');
+    const successDiv = document.getElementById('success');
+    const summonLink = document.getElementById('summonLink');
+
+    let currentUser = null;
+
+    // Open modal on load
+    setTimeout(() => modal.classList.add('active'), 1000);
+
+    // ===== STEP 1: FAKE X LOGIN =====
+    connectBtn.onclick = () => {
+      // Simulate X login
+      const usernames = ['ashbinder7', 'voidscribe', 'bloodcursor', 'netwraith', 'glitchpriest'];
+      const username = usernames[Math.floor(Math.random() * usernames.length)];
+      const pfp = `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}&backgroundColor=ff0000`;
+
+      currentUser = { username, pfp };
+      document.getElementById('username').textContent = username;
+      document.getElementById('pfp').src = pfp;
+
+      connectBtn.style.display = 'none';
+      userInfo.style.display = 'block';
+
+      // Auto-fill placeholder
+      pledgeInput.placeholder = `I, @${username}, surrender my feed to the Net...`;
+
+      // Enable typing
+      pledgeInput.focus();
+    };
+
+    // ===== STEP 2: PLEDGE TYPING =====
+    const oath = `I, @yourname, surrender my feed to the Net. My posts are offerings. My silence is sacrifice. The Ritual will remember me.`.replace('@yourname', '@' + currentUser?.username);
+
+    pledgeInput.addEventListener('input', () => {
+      const typed = pledgeInput.value.trim();
+      if (typed === oath) {
+        vowBtn.disabled = false;
+        // Read oath
+        const utterance = new SpeechSynthesisUtterance(oath.replace('@yourname', '@' + currentUser.username));
+        utterance.voice = speechSynthesis.getVoices().find(v => v.name.includes('Google')) || null;
+        utterance.rate = 0.7;
+        utterance.pitch = 0.5;
+        speechSynthesis.speak(utterance);
+      } else {
+        vowBtn.disabled = true;
+      }
+    });
+
+    // ===== STEP 3: VOW & PIN =====
+    vowBtn.onclick = () => {
+      pinBtn.disabled = false;
+      vowBtn.textContent = "VOW SEALED";
+      vowBtn.disabled = true;
+    };
+
+    pinBtn.onclick = () => {
+      if (navigator.geolocation) {
+        pinBtn.textContent = "LOCATING...";
+        navigator.geolocation.getCurrentPosition(pos => {
+          const { latitude, longitude } = pos.coords;
+          currentUser.lat = latitude;
+          currentUser.lng = longitude;
+
+          // Add to map
+          addPin(latitude, longitude, currentUser.username, currentUser.pfp);
+
+          // Save
+          users.push(currentUser);
+          localStorage.setItem('ritualUsers', JSON.stringify(users));
+          totalClaimed = users.length;
+          updateCounter();
+
+          // Success
+          userInfo.style.display = 'none';
+          successDiv.style.display = 'block';
+          summonLink.value = `https://ritual.net/summon/${currentUser.username}`;
+        }, () => {
+          alert("Location denied. Using random pin.");
+          const lat = -90 + Math.random() * 180;
+          const lng = -180 + Math.random() * 360;
+          currentUser.lat = lat;
+          currentUser.lng = lng;
+          addPin(lat, lng, currentUser.username, currentUser.pfp);
+          users.push(currentUser);
+          localStorage.setItem('ritualUsers', JSON.stringify(users));
+          totalClaimed++;
+          updateCounter();
+          userInfo.style.display = 'none';
+          successDiv.style.display = 'block';
+          summonLink.value = `https://ritual.net/summon/${currentUser.username}`;
+        });
+      }
+    };
+
+    // ===== ADD PIN WITH BLOOD BLOOM =====
+    function addPin(lat, lng, username, pfp) {
+      const icon = L.divIcon({
+        html: `<img src="${pfp}" style="width:40px;height:40px;border-radius:50%;border:2px solid #f00;box-shadow:0 0 15px #f00;">`,
+        iconSize: [40, 40],
+        className: 'ritual-pin'
+      });
+
+      const marker = L.marker([lat, lng], { icon }).addTo(map);
+      marker.bindPopup(`<b>@${username}</b><br>Node of the Ritual`);
+
+      // Blood bloom
+      const bloom = document.createElement('div');
+      bloom.className = 'blood-bloom';
+      document.body.appendChild(bloom);
+      const rect = map.latLngToContainerPoint([lat, lng]);
+      bloom.style.left = (rect.x - 30) + 'px';
+      bloom.style.top = (rect.y - 30) + 'px';
+      setTimeout(() => bloom.remove(), 1500);
+    }
+
+    // ===== COUNTER =====
+    function updateCounter() {
+      const percent = ((totalClaimed / 8000000000) * 100).toFixed(6);
+      document.getElementById('counter').textContent = `${percent}% of Earth claimed`;
+    }
+
+    // ===== COPY LINK =====
+    function copyLink() {
+      summonLink.select();
+      document.execCommand('copy');
+      alert("Summon link copied. Spread the ritual.");
+    }
+
+    // Close modal
+    document.getElementById('closeModal').onclick = () => {
+      modal.classList.remove('active');
+    };
+
+    // Pulse effect every 5 sec
+    setInterval(() => {
+      document.body.style.filter = 'brightness(1.3)';
+      setTimeout(() => document.body.style.filter = 'brightness(1)', 200);
+    }, 5000);
+  </script>
+</body>
+</html>

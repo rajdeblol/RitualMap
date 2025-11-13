@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Firebase (compat) - add these lines in <head> after Leaflet scripts -->
+  <!-- Firebase (compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
@@ -149,13 +149,15 @@
         iconAnchor: [s/2, s/2]
       });
     }
-    map.on('zoomend', () => markers.eachLayer(m => m.setIcon(createIcon(m.options.data.avatar))));
+    map.on('zoomend', () => markers.eachLayer(m => m.setIcon(createIcon(m.options.data?.avatar || 'ritualnet-logo.png'))));
 
     // LOAD SAVED
     function loadAll() {
+      // reload local copy from localStorage (in case helper updated it)
+      summonings = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]') || [];
       markers.clearLayers(); recent.innerHTML = '';
       summonings.slice(-10).reverse().forEach(s => {
-        const icon = createIcon(s.avatar);
+        const icon = createIcon(s.avatar || 'ritualnet-logo.png');
         const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
         m.bindPopup(`<div style="color:#0f0;background:#000;padding:16px;border:3px solid #0f0;border-radius:20px;text-align:center;">
           <img src="${s.avatar}" width="80" style="border-radius:50%;border:4px solid #0f0;margin-bottom:10px;">
@@ -229,9 +231,9 @@
     };
   </script>
 
-  <!-- Firebase realtime-sync helper (add BEFORE </body>) -->
+  <!-- Firebase realtime-sync helper (FINAL working version) -->
   <script>
-    // === CONFIG: paste your Firebase project's config here ===
+    // ===== REPLACE THESE VALUES with your Firebase project's config =====
     const FIREBASE_CONFIG = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -241,53 +243,70 @@
       messagingSenderId: "SENDER_ID",
       appId: "APP_ID"
     };
+    // ====================================================================
 
-    (function(){
-      // Safe-guard: don't run if config not filled
+    (function() {
       if (!FIREBASE_CONFIG || FIREBASE_CONFIG.apiKey === "YOUR_API_KEY") {
-        console.warn("Firebase config not set — realtime sync disabled.");
+        console.warn("Firebase config missing — realtime disabled.");
         return;
       }
 
       try {
         firebase.initializeApp(FIREBASE_CONFIG);
         const db = firebase.database();
-        const rootRef = db.ref('ritualnet/summonings');
+        const rootRef = db.ref("ritualnet/summonings");
 
-        // 1) On startup — if localStorage has summonings, push them to DB (merge)
-        try {
-          const local = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
-          if (Array.isArray(local) && local.length) {
-            // push each item (only once)
-            local.forEach(item => {
-              // avoid duplicates by a simple timestamp check if present
-              const candidate = Object.assign({}, item);
-              // Use push so each entry is a separate node
-              rootRef.push(candidate).catch(e => console.warn("push err", e));
-            });
-          }
-        } catch (e) { console.warn("local parse err", e); }
-
-        // 2) Listen for DB changes and mirror into localStorage so your existing loadAll() uses them.
-        rootRef.on('value', snap => {
+        // Realtime listener: update localStorage and call loadAll() whenever DB changes
+        rootRef.on("value", (snap) => {
           const val = snap.val() || {};
-          // convert object map to array
-          const arr = Object.keys(val).map(k => Object.assign({}, val[k], { __key: k }));
-          // store into localStorage (non-destructive for your code)
+          const arr = Object.keys(val).map(k => val[k]);
           try {
-            localStorage.setItem('ritualnet_summonings', JSON.stringify(arr));
-            // optional: if you want immediate UI update without manual refresh, reload once
-            // Comment out the next two lines if you prefer not to reload automatically.
-            if (!sessionStorage.getItem('ritualnet_reloaded')) {
-              sessionStorage.setItem('ritualnet_reloaded', '1');
-              location.reload();
-            }
-          } catch (e) { console.warn("ls set failed", e); }
-        }, err => console.warn("DB listen err", err));
+            localStorage.setItem("ritualnet_summonings", JSON.stringify(arr));
+          } catch (e) { console.warn("localStorage set failed", e); }
+          if (typeof loadAll === "function") {
+            loadAll();
+          }
+        }, err => {
+          console.warn("Firebase DB listen error:", err);
+        });
 
-        console.log("Firebase realtime-sync helper initialized.");
+        // Push the latest join to Firebase after local join happens.
+        const joinBtn = document.querySelector(".join-btn");
+        if (joinBtn) {
+          // If onclick was assigned earlier, preserve it and call it.
+          const existingOnClick = joinBtn.onclick;
+          joinBtn.addEventListener("click", () => {
+            try {
+              // Allow existing onclick to run (it updates localStorage)
+              if (typeof existingOnClick === "function") existingOnClick();
+            } catch (e) { /* ignore */ }
+
+            // Push the last item in localStorage (the new summon)
+            try {
+              const all = JSON.parse(localStorage.getItem("ritualnet_summonings") || "[]");
+              const latest = all[all.length - 1];
+              if (latest) {
+                rootRef.push(latest).catch(err => console.warn("Firebase push error:", err));
+              }
+            } catch (e) {
+              console.warn("Could not push latest to Firebase", e);
+            }
+          }, { passive: true });
+        }
+
+        // Ensure reset removes DB too
+        const confirmReset = document.getElementById("confirmReset");
+        if (confirmReset) {
+          const prev = confirmReset.onclick;
+          confirmReset.onclick = () => {
+            try { if (typeof prev === "function") prev(); } catch(e){}
+            rootRef.remove().catch(e => console.warn("Failed to remove remote nodes", e));
+          };
+        }
+
+        console.log("RitualNet Firebase realtime helper active.");
       } catch (err) {
-        console.warn("Firebase init failed:", err);
+        console.error("Firebase helper failed:", err);
       }
     })();
   </script>

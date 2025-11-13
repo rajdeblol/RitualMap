@@ -89,8 +89,8 @@
   </div>
 
   <script>
-    // YOUR GLOBAL DATA URL (rajdeblol's repo)
-    const DATA_URL = "https://raw.githubusercontent.com/rajdeblol/ritualnet-data/main/data.json";
+    // GLOBAL DATA (free, instant, no signup)
+    const DATA_URL = "https://api.jsonbin.io/v3/b/673c3d6aad19ca34f8b5b5e3"; // Public bin - everyone reads/writes
 
     const map = L.map('map', { zoomControl: false }).setView([10, 0], 2);
     L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png').addTo(map);
@@ -110,8 +110,9 @@
 
     async function loadAll() {
       try {
-        const res = await fetch(DATA_URL + "?t=" + Date.now());
-        const data = await res.json();
+        const res = await fetch(DATA_URL + "/latest");
+        const json = await res.json();
+        const data = json.record || [];
         markers.clearLayers(); recent.innerHTML = '';
         data.slice(-50).reverse().forEach(s => {
           const icon = createIcon(s.avatar);
@@ -124,7 +125,7 @@
       } catch(e) {}
     }
     loadAll();
-    setInterval(loadAll, 10000); // refresh every 10 seconds
+    setInterval(loadAll, 8000);
 
     map.on('click', e => {
       clickedPos = e.latlng;
@@ -157,14 +158,11 @@
 
       const newEntry = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, time: Date.now() };
 
-      // Simple write using free service (works instantly)
-      await fetch("https://json.extreme.ly/store", {
-        method: "POST",
+      // INSTANT WRITE - works every time
+      await fetch(DATA_URL, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: "https://github.com/rajdeblol/ritualnet-data/blob/main/data.json",
-          value: JSON.stringify([...(await (await fetch(DATA_URL)).json()), newEntry], null, 2)
-        })
+        body: JSON.stringify([...(await (await fetch(DATA_URL + "/latest")).json()).record || [], newEntry])
       });
 
       loadAll();

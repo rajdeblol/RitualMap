@@ -4,131 +4,124 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>RITUALNET</title>
-
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;700&display=swap');
 
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { margin:0; background:#000; color:#0f0; font-family:'Rajdhani',sans-serif; overflow:hidden; height:100vh; }
-    #map { position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; }
+    body { margin:0; background:#000; overflow:hidden; height:100vh; font-family:'Rajdhani',sans-serif; }
 
-    /* Hide Leaflet zoom controls */
+    #map { position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; }
     .leaflet-control-zoom { display:none !important; }
 
-    /* Header */
     .header {
       position:absolute; top:0; left:0; right:0; height:90px;
       background:linear-gradient(to bottom,rgba(0,30,0,0.98),transparent);
       display:flex; align-items:center; justify-content:center; z-index:10;
-      border-bottom:2px solid #00ff4133;
     }
     .logo {
-      font-family:'Orbitron',sans-serif; font-size:48px; font-weight:900;
-      background:linear-gradient(90deg,#00ff41,#00cc33);
+      font-family:'Orbitron',sans-serif; font-size:50px; font-weight:900;
+      background:linear-gradient(90deg,#00ff41,#00ff88);
       -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-      text-shadow:0 0 40px #00ff4188;
-      letter-spacing:8px;
+      text-shadow:0 0 50px #00ff4188;
+      letter-spacing:10px;
     }
 
-    /* Ritual Modal */
+    /* Ritual Modal - EXACT MATCH TO YOUR DESIGN */
     .modal {
       position:fixed; top:0; left:0; width:100%; height:100%;
-      background:rgba(0,0,0,0.98); backdrop-filter:blur(15px);
+      background:rgba(0,0,0,0.98); backdrop-filter:blur(20px);
       display:none; align-items:center; justify-content:center; z-index:100;
     }
     .card {
-      width:420px; background:#000; border:2px solid #00ff41; border-radius:20px;
-      padding:40px; box-shadow:0 0 80px rgba(0,255,65,0.6); text-align:center;
-      animation:fadeInScale 0.7s ease-out;
+      width:420px; background:#000; padding:50px 40px;
+      border:3px solid #00ff41; border-radius:30px;
+      text-align:center; position:relative;
+      box-shadow:0 0 100px rgba(0,255,65,0.7);
     }
-    @keyframes fadeInScale { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
+    .close-btn {
+      position:absolute; top:20px; right:25px;
+      width:40px; height:40px; background:transparent;
+      border:2px solid #00ff41; border-radius:50%;
+      color:#00ff41; font-size:28px; font-weight:bold;
+      cursor:pointer; transition:0.3s;
+    }
+    .close-btn:hover { background:#00ff4111; transform:rotate(90deg); }
 
     .card h2 {
-      font-family:'Orbitron',sans-serif; color:#00ff41; font-size:32px;
-      text-shadow:0 0 25px #00ff41; margin-bottom:30px; letter-spacing:4px;
+      font-family:'Orbitron',sans-serif; color:#00ff41; font-size:42px;
+      text-shadow:0 0 30px #00ff41; margin-bottom:40px; letter-spacing:8px;
     }
 
-    .pfp-preview {
-      width:110px; height:110px; border-radius:50%; object-fit:cover;
-      border:4px solid #00ff41; margin:20px auto; box-shadow:0 0 50px #00ff4188;
-      display:block;
+    .avatar-circle {
+      width:140px; height:140px; border-radius:50%;
+      margin:30px auto; border:6px solid #00ff41;
+      overflow:hidden; box-shadow:0 0 60px #00ff4188;
+      background:#000;
+    }
+    .avatar-circle img {
+      width:100%; height:100%; object-fit:cover;
     }
 
-    .file-label {
-      display:block; padding:16px; background:#001100; border:2px dashed #00ff41;
-      border-radius:14px; cursor:pointer; margin:20px 0 25px; font-size:16px; transition:0.3s;
+    .upload-btn, .input-field, .pledge-field {
+      width:100%; padding:18px; margin:18px 0;
+      background:#001100; border:2px dashed #00ff41;
+      border-radius:20px; color:#00ff88; font-size:18px;
+      text-align:center; cursor:pointer; transition:0.3s;
     }
-    .file-label:hover { background:#002200; transform:translateY(-2px); }
-
-    input, textarea {
-      width:100%; padding:16px; margin:12px 0; background:#001100;
-      border:1px solid #00ff41; border-radius:12px; color:#0f0; font-size:17px;
-      transition:border 0.3s;
+    .upload-btn:hover, .input-field:focus, .pledge-field:focus {
+      background:#002200; outline:none; border-style:solid;
     }
-    input:focus, textarea:focus { outline:none; border-color:#00ff88; box-shadow:0 0 20px #00ff4122; }
+    .pledge-field { height:100px; resize:none; text-align:left; padding:20px; }
 
-    .submit-btn {
-      background:#00ff41; color:#000; border:none; padding:18px 60px;
-      font-family:'Orbitron',sans-serif; font-size:22px; font-weight:900;
-      border-radius:50px; cursor:pointer; margin-top:25px;
-      box-shadow:0 0 40px #00ff41; transition:all 0.4s;
+    .join-btn {
+      margin-top:30px; padding:20px 80px;
+      background:#00ff41; color:#000; border:none;
+      border-radius:50px; font-family:'Orbitron',sans-serif;
+      font-size:28px; font-weight:900; cursor:pointer;
+      box-shadow:0 0 60px #00ff41; transition:0.4s;
     }
-    .submit-btn:hover { transform:scale(1.1); box-shadow:0 0 70px #00ff41; }
+    .join-btn:hover { transform:scale(1.1); box-shadow:0 0 100px #00ff41; }
 
-    /* Success Animation */
+    /* Success Screen */
     .success {
       position:fixed; top:0; left:0; width:100%; height:100%;
-      background:rgba(0,0,0,0.98); display:none; align-items:center; justify-content:center;
-      z-index:200; flex-direction:column; color:#00ff41; text-align:center;
+      background:#000; display:none; align-items:center; justify-content:center;
+      flex-direction:column; z-index:200; text-align:center; color:#00ff41;
     }
     .success h1 {
-      font-family:'Orbitron',sans-serif; font-size:60px; margin-bottom:20px;
-      text-shadow:0 0 40px #00ff41; animation:pulseText 2s infinite;
+      font-family:'Orbitron',sans-serif; font-size:70px; margin-bottom:20px;
+      text-shadow:0 0 60px #00ff41; animation:pulse 2s infinite;
     }
-    .success p { font-size:24px; opacity:0.9; }
-
-    @keyframes pulseText {
-      0%,100% { text-shadow:0 0 40px #00ff41; }
-      50% { text-shadow:0 0 80px #00ff41, 0 0 120px #00ff4188; }
-    }
+    @keyframes pulse { 0%,100%{text-shadow:0 0 60px #00ff41} 50%{text-shadow:0 0 120px #00ff41} }
 
     /* Recent Panel */
     .panel {
       position:absolute; left:20px; bottom:30px; width:400px;
-      background:rgba(0,15,0,0.96); border:1px solid #00ff41; border-radius:18px;
-      padding:24px; box-shadow:0 0 60px rgba(0,255,65,0.4); z-index:10;
+      background:rgba(0,20,0,0.96); border:2px solid #00ff41; border-radius:20px;
+      padding:25px; box-shadow:0 0 70px rgba(0,255,65,0.5); z-index:10;
     }
     .panel h3 {
-      font-family:'Orbitron',sans-serif; color:#00ff41; font-size:26px;
-      text-shadow:0 0 15px; margin-bottom:20px;
+      font-family:'Orbitron',sans-serif; color:#00ff41; font-size:28px;
+      text-shadow:0 0 20px; margin-bottom:20px;
     }
     .entry {
-      display:flex; align-items:center; margin-bottom:18px;
-      padding:12px; background:rgba(0,255,65,0.06); border-left:5px solid #00ff41;
-      border-radius:0 12px 12px 0; animation:slideIn 0.6s ease-out;
+      display:flex; align-items:center; margin:15px 0;
+      padding:12px; background:rgba(0,255,65,0.08);
+      border-left:5px solid #00ff41; border-radius:0 15px 15px 0;
     }
-    @keyframes slideIn { from{transform:translateX(-50px);opacity:0} to{transform:translateX(0);opacity:1} }
     .entry img {
-      width:52px; height:52px; border-radius:50%; border:3px solid #00ff41;
-      margin-right:16px; box-shadow:0 0 30px #00ff4188;
+      width:50px; height:50px; border-radius:50%; border:3px solid #00ff41;
+      margin-right:15px; box-shadow:0 0 30px #00ff4188;
     }
     .entry .name { color:#00ff88; font-weight:bold; font-family:'Orbitron',sans-serif; }
-
-    /* Marker */
-    .glow img {
-      filter:drop-shadow(0 0 30px #00ff41);
-      animation:markerGlow 4s ease-in-out infinite alternate;
-    }
-    @keyframes markerGlow { from{filter:drop-shadow(0 0 25px #00ff41)} to{filter:drop-shadow(0 0 50px #00ff41)} }
   </style>
 </head>
 <body>
 
   <div id="map"></div>
-
   <div class="header"><div class="logo">RITUALNET</div></div>
 
   <!-- Recent Summonings -->
@@ -137,22 +130,27 @@
     <div id="recent"></div>
   </div>
 
-  <!-- Ritual Card -->
-  <div class="modal" id="ritualCard">
+  <!-- Ritual Modal -->
+  <div class="modal" id="ritualModal">
     <div class="card">
+      <div class="close-btn" id="closeBtn">×</div>
       <h2>PERFORM THE RITUAL</h2>
-      <img src="" alt="" class="pfp-preview" id="pfp">
-      <label class="file-label">UPLOAD AVATAR</label>
-      <input type="file" id="fileInput" accept="image/*" style="display:none;">
+      
+      <div class="avatar-circle">
+        <img src="" alt="" id="avatarPreview">
+      </div>
+      
+      <label class="upload-btn">UPLOAD AVATAR</label>
+      <input type="file" id="avatarInput" accept="image/*" style="display:none;">
 
-      <input type="text" id="username" placeholder="X / Twitter username">
-      <textarea id="pledge" placeholder="Speak your pledge..."></textarea>
+      <input type="text" class="input-field" id="username" placeholder="X / Twitter username">
+      <textarea class="pledge-field input-field" id="pledge" placeholder="Speak your pledge..."></textarea>
 
-      <button class="submit-btn">JOIN THE CIRCLE</button>
+      <button class="join-btn">JOIN THE CIRCLE</button>
     </div>
   </div>
 
-  <!-- Success Screen -->
+  <!-- Success -->
   <div class="success" id="success">
     <h1>YOU ARE RITUALIZED</h1>
     <p>The circle grows stronger.</p>
@@ -167,66 +165,75 @@
     const markers = L.layerGroup().addTo(map);
     const recent = document.getElementById('recent');
     let summonings = [];
-    let latlng = null;
+    let clickedPos = null;
 
+    // Open modal on map click
     map.on('click', e => {
-      latlng = e.latlng;
-      document.getElementById('ritualCard').style.display = 'flex';
-      document.getElementById('pfp').src = '';
+      clickedPos = e.latlng;
+      document.getElementById('ritualModal').style.display = 'flex';
+      document.getElementById('avatarPreview').src = '';
       document.getElementById('username').value = '';
       document.getElementById('pledge').value = '';
     });
 
-    document.querySelector('.file-label').onclick = () => document.getElementById('fileInput').click();
-    document.getElementById('fileInput').onchange = e => {
+    // Close modal
+    const closeModal = () => {
+      document.getElementById('ritualModal').style.display = 'none';
+      clickedPos = null;
+    };
+    document.getElementById('closeBtn').onclick = closeModal;
+    document.querySelector('.modal').onclick = (e) => {
+      if (e.target.classList.contains('modal')) closeModal();
+    };
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // Avatar upload
+    document.querySelector('.upload-btn').onclick = () => document.getElementById('avatarInput').click();
+    document.getElementById('avatarInput').onchange = e => {
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = ev => document.getElementById('pfp').src = ev.target.result;
+        reader.onload = ev => document.getElementById('avatarPreview').src = ev.target.result;
         reader.readAsDataURL(file);
       }
     };
 
-    document.querySelector('.submit-btn').onclick = () => {
-      const pfp = document.getElementById('pfp').src;
+    // Submit
+    document.querySelector('.join-btn').onclick = () => {
+      const avatar = document.getElementById('avatarPreview').src;
       const name = document.getElementById('username').value.trim() || "ritualist";
-      const pledge = document.getElementById('pledge').value.trim() || "I am here.";
+      const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
 
-      if (!pfp || !latlng) return;
+      if (!avatar || !clickedPos) return;
 
       // Add marker
       const icon = L.divIcon({
-        className: 'glow',
-        html: `<img src="${pfp}" style="width:56px;height:56px;border-radius:50%;border:4px solid #00ff41;">`,
+        html: `<img src="${avatar}" style="width:56px;height:56px;border-radius:50%;border:4px solid #00ff41;box-shadow:0 0 40px #00ff4188;">`,
         iconSize: [56,56], iconAnchor: [28,56]
       });
-      L.marker(latlng, { icon }).addTo(markers)
-        .bindPopup(`<div style="color:#0f0;background:#000;padding:14px;border:2px solid #0f0;border-radius:12px;text-align:center;">
-          <img src="${pfp}" width="70" style="border-radius:50%;border:3px solid #0f0;margin-bottom:8px;">
+      L.marker(clickedPos, { icon }).addTo(markers)
+        .bindPopup(`<div style="color:#0f0;background:#000;padding:16px;border:3px solid #0f0;border-radius:20px;text-align:center;">
+          <img src="${avatar}" width="80" style="border-radius:50%;border:4px solid #0f0;margin-bottom:10px;">
           <br><b style="color:#00ff41;">@${name}</b><br><i>"${pledge}"</i>
         </div>`).openPopup();
 
-      // Add to recent
-      summonings.push({ name, pledge, pfp });
+      // Recent
+      summonings.push({ name, pledge, avatar });
       if (summonings.length > 3) summonings.shift();
       recent.innerHTML = '';
       summonings.slice().reverse().forEach(s => {
-        const el = document.createElement('div');
-        el.className = 'entry';
-        el.innerHTML = `<img src="${s.pfp}"><div><div class="name">@${s.name}</div>"${s.pledge}"</div>`;
-        recent.appendChild(el);
+        recent.innerHTML += `<div class="entry">
+          <img src="${s.avatar}"><div><div class="name">@${s.name}</div>"${s.pledge}"</div>
+        </div>`;
       });
 
-      // Close card → show success
-      document.getElementById('ritualCard').style.display = 'none';
+      // Success + close
+      closeModal();
       document.getElementById('success').style.display = 'flex';
-
       setTimeout(() => {
         document.getElementById('success').style.display = 'none';
-        map.setView(latlng, 9, { animate: true });
+        map.setView(clickedPos, 10, { animate: true });
       }, 3000);
-
-      latlng = null;
     };
   </script>
 </body>

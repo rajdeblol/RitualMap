@@ -28,7 +28,7 @@
       text-shadow:0 0 50px #00ff4188; letter-spacing:10px;
     }
 
-    /* MODAL - EXACT DESIGN */
+    /* MODAL */
     .modal {
       position:fixed; top:0; left:0; width:100%; height:100%;
       background:rgba(0,0,0,0.98); backdrop-filter:blur(20px);
@@ -44,20 +44,14 @@
       position:absolute; top:20px; right:25px; width:40px; height:40px;
       background:transparent; border:2px solid #00ff41; border-radius:50%;
       color:#00ff41; font-size:28px; font-weight:bold; cursor:pointer;
-      transition:0.3s;
     }
     .close-btn:hover { background:#00ff4111; transform:rotate(90deg); }
 
-    .card h2 {
-      font-family:'Orbitron',sans-serif; color:#00ff41; font-size:42px;
-      text-shadow:0 0 30px #00ff41; margin-bottom:40px; letter-spacing:8px;
-    }
+    .card h2 { font-family:'Orbitron',sans-serif; color:#00ff41; font-size:42px;
+      text-shadow:0 0 30px #00ff41; margin-bottom:40px; letter-spacing:8px; }
 
-    .avatar-circle {
-      width:140px; height:140px; border-radius:50%; margin:30px auto;
-      border:6px solid #00ff41; overflow:hidden; box-shadow:0 0 60px #00ff4188;
-      background:#000;
-    }
+    .avatar-circle { width:140px; height:140px; border-radius:50%; margin:30px auto;
+      border:6px solid #00ff41; overflow:hidden; box-shadow:0 0 60px #00ff4188; background:#000; }
     .avatar-circle img { width:100%; height:100%; object-fit:cover; }
 
     .upload-btn, .input-field, .pledge-field {
@@ -65,9 +59,7 @@
       border:2px dashed #00ff41; border-radius:20px; color:#00ff88;
       font-size:18px; text-align:center; cursor:pointer; transition:0.3s;
     }
-    .upload-btn:hover, .input-field:focus, .pledge-field:focus {
-      background:#002200; outline:none; border-style:solid;
-    }
+    .upload-btn:hover, .input-field:focus, .pledge-field:focus { background:#002200; border-style:solid; outline:none; }
     .pledge-field { height:100px; resize:none; text-align:left; padding:20px; }
 
     .join-btn {
@@ -84,53 +76,24 @@
       background:#000; display:none; align-items:center; justify-content:center;
       flex-direction:column; z-index:200; text-align:center; color:#00ff41;
     }
-    .success h1 {
-      font-family:'Orbitron',sans-serif; font-size:70px;
-      text-shadow:0 0 60px #00ff41; animation:pulse 2s infinite;
-    }
+    .success h1 { font-family:'Orbitron',sans-serif; font-size:70px;
+      text-shadow:0 0 60px #00ff41; animation:pulse 2s infinite; }
     @keyframes pulse { 0%,100%{text-shadow:0 0 60px #00ff41} 50%{text-shadow:0 0 120px #00ff41} }
 
-    /* RECENT PANEL - EXACT MATCH */
+    /* RECENT PANEL */
     .panel {
       position:absolute; left:20px; bottom:30px; width:420px;
       background:#000; border:3px solid #00ff41; border-radius:25px;
       padding:25px; box-shadow:0 0 80px rgba(0,255,65,0.6); z-index:10;
     }
-    .panel h3 {
-      font-family:'Orbitron',sans-serif; color:#00ff41; font-size:32px;
-      text-shadow:0 0 25px #00ff41; margin-bottom:20px;
-    }
-    .entry {
-      display:flex; align-items:center; margin:15px 0;
-      padding:15px; background:rgba(0,255,65,0.08);
-      border:2px solid #00ff41; border-radius:20px;
-    }
-    .entry img {
-      width:48px; height:48px; border-radius:50%; border:3px solid #00ff41;
-      margin-right:15px; box-shadow:0 0 30px #00ff4188;
-    }
+    .panel h3 { font-family:'Orbitron',sans-serif; color:#00ff41; font-size:32px;
+      text-shadow:0 0 25px #00ff41; margin-bottom:20px; }
+    .entry { display:flex; align-items:center; margin:15px 0; padding:15px;
+      background:rgba(0,255,65,0.08); border:2px solid #00ff41; border-radius:20px; }
+    .entry img { width:48px; height:48px; border-radius:50%; border:3px solid #00ff41;
+      margin-right:15px; box-shadow:0 0 30px #00ff4188; }
     .entry .name { color:#00ff88; font-weight:bold; font-family:'Orbitron',sans-serif; font-size:18px; }
     .entry .pledge { color:#00ff88; font-size:15px; margin-top:4px; }
-
-    /* DYNAMIC MARKER - SCALES PERFECTLY AT ALL ZOOMS */
-    .ritual-marker img {
-      width: 100% !important;
-      height: 100% !important;
-      border-radius: 50%;
-      border: 3px solid #00ff41;
-      box-shadow: 0 0 30px #00ff41;
-    }
-    .ritual-marker {
-      background: transparent;
-      border: 4px solid #00ff41;
-      border-radius: 50%;
-      box-shadow: 0 0 40px #00ff4188;
-      animation: glowPulse 4s infinite alternate;
-    }
-    @keyframes glowPulse {
-      from { box-shadow: 0 0 40px #00ff4188; }
-      to { box-shadow: 0 0 70px #00ff41; }
-    }
   </style>
 </head>
 <body>
@@ -138,33 +101,25 @@
   <div id="map"></div>
   <div class="header"><div class="logo">RITUALNET</div></div>
 
-  <!-- Recent Panel -->
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent"></div>
   </div>
 
-  <!-- Ritual Modal -->
+  <!-- MODAL -->
   <div class="modal" id="ritualModal">
     <div class="card">
-      <div class="close-btn" id="closeBtn">×</div>
+      <div class="close-btn" id="closeBtn">X</div>
       <h2>PERFORM THE RITUAL</h2>
-      
-      <div class="avatar-circle">
-        <img src="" alt="" id="avatarPreview">
-      </div>
-      
+      <div class="avatar-circle"><img src="" id="avatarPreview"></div>
       <label class="upload-btn">UPLOAD AVATAR</label>
       <input type="file" id="avatarInput" accept="image/*" style="display:none;">
-
       <input type="text" class="input-field" id="username" placeholder="X / Twitter username">
       <textarea class="pledge-field input-field" id="pledge" placeholder="Speak your pledge..."></textarea>
-
       <button class="join-btn">JOIN THE CIRCLE</button>
     </div>
   </div>
 
-  <!-- Success -->
   <div class="success" id="success">
     <h1>YOU ARE RITUALIZED</h1>
     <p>The circle grows stronger.</p>
@@ -178,19 +133,58 @@
 
     const markers = L.layerGroup().addTo(map);
     const recent = document.getElementById('recent');
-    let summonings = [];
-    let clickedPos = null;
+    let summonings = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
 
-    // Dynamic marker size based on zoom
-    function createMarkerIcon(imgSrc) {
+    // DYNAMIC ICON SIZE BASED ON ZOOM
+    function getIconSize() {
+      const zoom = map.getZoom();
+      if (zoom <= 3) return 28;
+      if (zoom <= 5) return 36;
+      if (zoom <= 7) return 44;
+      if (zoom <= 10) return 56;
+      return 68;
+    }
+
+    function createIcon(src) {
+      const size = getIconSize();
       return L.divIcon({
         className: 'ritual-marker',
-        html: `<img src="${imgSrc}">`,
-        iconSize: [50, 50],
-        iconAnchor: [25, 25]
+        html: `<img src="${src}" style="width:${size}px;height:${size}px;border-radius:50%;border:4px solid #00ff41;box-shadow:0 0 30px #00ff41;">`,
+        iconSize: [size, size],
+        iconAnchor: [size/2, size/2]
       });
     }
 
+    // Update all marker sizes when zoom changes
+    map.on('zoomend', () => {
+      markers.eachLayer(marker => {
+        const data = marker.options.data;
+        marker.setIcon(createIcon(data.avatar));
+      });
+    });
+
+    // Load saved summonings
+    function loadSummonings() {
+      markers.clearLayers();
+      recent.innerHTML = '';
+      summonings.slice(-10).reverse().forEach(s => {
+        const icon = createIcon(s.avatar);
+        const marker = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
+        marker.bindPopup(`
+          <div style="color:#0f0;background:#000;padding:16px;border:3px solid #0f0;border-radius:20px;text-align:center;">
+            <img src="${s.avatar}" width="80" style="border-radius:50%;border:4px solid #0f0;margin-bottom:10px;">
+            <br><b style="color:#00ff41;">@${s.name}</b><br><i>"${s.pledge}"</i>
+          </div>`);
+
+        recent.innerHTML += `<div class="entry">
+          <img src="${s.avatar}">
+          <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
+        </div>`;
+      });
+    }
+    loadSummonings();
+
+    let clickedPos = null;
     map.on('click', e => {
       clickedPos = e.latlng;
       document.getElementById('ritualModal').style.display = 'flex';
@@ -199,7 +193,6 @@
       document.getElementById('pledge').value = '';
     });
 
-    // Close modal
     const closeModal = () => {
       document.getElementById('ritualModal').style.display = 'none';
       clickedPos = null;
@@ -208,7 +201,6 @@
     document.querySelector('.modal').onclick = e => { if (e.target.classList.contains('modal')) closeModal(); };
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-    // Avatar upload
     document.querySelector('.upload-btn').onclick = () => document.getElementById('avatarInput').click();
     document.getElementById('avatarInput').onchange = e => {
       const file = e.target.files[0];
@@ -219,7 +211,6 @@
       }
     };
 
-    // Submit
     document.querySelector('.join-btn').onclick = () => {
       const avatar = document.getElementById('avatarPreview').src;
       const name = document.getElementById('username').value.trim() || "ritualist";
@@ -227,31 +218,11 @@
 
       if (!avatar || !clickedPos) return;
 
-      // Add perfectly scaled marker
-      const marker = L.marker(clickedPos, {
-        icon: createMarkerIcon(avatar)
-      }).addTo(markers);
+      const newSummoning = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng };
+      summonings.push(newSummoning);
+      localStorage.setItem('ritualnet_summonings', JSON.stringify(summonings));
 
-      marker.bindPopup(`
-        <div style="color:#0f0;background:#000;padding:16px;border:3px solid #0f0;border-radius:20px;text-align:center;">
-          <img src="${avatar}" width="80" style="border-radius:50%;border:4px solid #0f0;margin-bottom:10px;">
-          <br><b style="color:#00ff41;">@${name}</b><br><i>"${pledge}"</i>
-        </div>
-      `).openPopup();
-
-      // Update recent
-      summonings.push({ name, pledge, avatar });
-      if (summonings.length > 3) summonings.shift();
-      recent.innerHTML = '';
-      summonings.slice().reverse().forEach(s => {
-        recent.innerHTML += `<div class="entry">
-          <img src="${s.avatar}">
-          <div>
-            <div class="name">@${s.name}</div>
-            <div class="pledge">"${s.pledge}"</div>
-          </div>
-        </div>`;
-      });
+      loadSummonings();
 
       closeModal();
       document.getElementById('success').style.display = 'flex';

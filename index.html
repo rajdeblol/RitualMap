@@ -7,6 +7,10 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+  <!-- Firebase (compat) - add these lines in <head> after Leaflet scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -224,5 +228,69 @@
       document.getElementById('resetConfirm').style.display = 'none';
     };
   </script>
+
+  <!-- Firebase realtime-sync helper (add BEFORE </body>) -->
+  <script>
+    // === CONFIG: paste your Firebase project's config here ===
+    const FIREBASE_CONFIG = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
+
+    (function(){
+      // Safe-guard: don't run if config not filled
+      if (!FIREBASE_CONFIG || FIREBASE_CONFIG.apiKey === "YOUR_API_KEY") {
+        console.warn("Firebase config not set — realtime sync disabled.");
+        return;
+      }
+
+      try {
+        firebase.initializeApp(FIREBASE_CONFIG);
+        const db = firebase.database();
+        const rootRef = db.ref('ritualnet/summonings');
+
+        // 1) On startup — if localStorage has summonings, push them to DB (merge)
+        try {
+          const local = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
+          if (Array.isArray(local) && local.length) {
+            // push each item (only once)
+            local.forEach(item => {
+              // avoid duplicates by a simple timestamp check if present
+              const candidate = Object.assign({}, item);
+              // Use push so each entry is a separate node
+              rootRef.push(candidate).catch(e => console.warn("push err", e));
+            });
+          }
+        } catch (e) { console.warn("local parse err", e); }
+
+        // 2) Listen for DB changes and mirror into localStorage so your existing loadAll() uses them.
+        rootRef.on('value', snap => {
+          const val = snap.val() || {};
+          // convert object map to array
+          const arr = Object.keys(val).map(k => Object.assign({}, val[k], { __key: k }));
+          // store into localStorage (non-destructive for your code)
+          try {
+            localStorage.setItem('ritualnet_summonings', JSON.stringify(arr));
+            // optional: if you want immediate UI update without manual refresh, reload once
+            // Comment out the next two lines if you prefer not to reload automatically.
+            if (!sessionStorage.getItem('ritualnet_reloaded')) {
+              sessionStorage.setItem('ritualnet_reloaded', '1');
+              location.reload();
+            }
+          } catch (e) { console.warn("ls set failed", e); }
+        }, err => console.warn("DB listen err", err));
+
+        console.log("Firebase realtime-sync helper initialized.");
+      } catch (err) {
+        console.warn("Firebase init failed:", err);
+      }
+    })();
+  </script>
+
 </body>
 </html>

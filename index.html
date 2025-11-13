@@ -4,177 +4,203 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ritualnet Map</title>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"/>
+
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@600&display=swap');
 
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       margin: 0;
-      background: #0a0a0f;
-      font-family: 'Orbitron', sans-serif;
-      color: #e0e0ff;
+      background: #000;
+      font-family: 'Rajdhani', sans-serif;
+      color: #0f0;
       overflow: hidden;
+      height: 100vh;
     }
-    #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-    
-    /* Top bar */
+    #map { 
+      position: absolute; 
+      top: 0; left: 0; width: 100%; height: 100%; 
+      z-index: 1; 
+    }
+
+    /* Header */
     .header {
       position: absolute;
       top: 0; left: 0; right: 0;
-      height: 60px;
-      background: linear-gradient(to bottom, rgba(20,0,40,0.9), transparent);
+      height: 70px;
+      background: linear-gradient(to bottom, rgba(0,15,0,0.95), transparent);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 20px;
+      padding: 0 25px;
       z-index: 10;
-      pointer-events: none;
+      border-bottom: 1px solid #0f03;
     }
     .logo {
-      font-size: 28px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 32px;
       font-weight: 900;
-      background: linear-gradient(90deg, #ff00aa, #aa00ff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 20px #ff00aa88;
+      color: #00ff41;
+      text-shadow: 
+        0 0 10px #00ff41,
+        0 0 20px #00ff4188,
+        0 0 40px #00ff4144;
+      letter-spacing: 3px;
     }
-    .view-toggle {
-      pointer-events: all;
-      background: rgba(30,10,60,0.7);
-      padding: 8px 16px;
-      border-radius: 30px;
-      backdrop-filter: blur(10px);
-      border: 1px solid #ff00aa44;
+
+    /* Toggle Switch */
+    .toggle-container {
+      background: #001100;
+      padding: 10px 20px;
+      border-radius: 50px;
+      border: 1px solid #00ff4133;
+      box-shadow: 0 0 20px rgba(0,255,65,0.2);
     }
-    .view-toggle label {
-      color: #fff;
-      margin: 0 10px;
-      cursor: pointer;
-    }
+    .toggle-label { color: #00ff88; font-weight: bold; margin: 0 15px; }
     .switch {
       position: relative;
       display: inline-block;
-      width: 50px;
-      height: 26px;
+      width: 60px;
+      height: 30px;
     }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider {
       position: absolute;
       cursor: pointer;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: #330033;
+      background: #003300;
       transition: .4s;
-      border-radius: 34px;
-      box-shadow: 0 0 15px #ff00aa55;
+      border-radius: 30px;
+      border: 1px solid #00ff41;
+      box-shadow: 0 0 15px #00ff4188;
     }
     .slider:before {
       position: absolute;
       content: "";
-      height: 20px; width: 20px;
+      height: 24px; width: 24px;
       left: 3px; bottom: 3px;
-      background: linear-gradient(#ff00aa, #aa00ff);
+      background: linear-gradient(#00ff41, #00cc33);
       transition: .4s;
       border-radius: 50%;
-      box-shadow: 0 0 15px #ff00aa;
+      box-shadow: 0 0 20px #00ff41;
     }
-    input:checked + .slider { background: #550055; }
-    input:checked + .slider:before { transform: translateX(24px); }
+    input:checked + .slider:before { transform: translateX(30px); }
 
     /* Recent Notes Panel */
     .notes-panel {
       position: absolute;
       left: 20px;
       bottom: 100px;
-      width: 320px;
-      background: rgba(15,5,35,0.85);
+      width: 360px;
+      background: rgba(0,10,0,0.92);
       backdrop-filter: blur(12px);
+      border: 1px solid #00ff4144;
       border-radius: 16px;
-      padding: 16px;
-      border: 1px solid #ff00aa33;
-      box-shadow: 0 0 30px rgba(255,0,170,0.3);
+      padding: 20px;
+      box-shadow: 
+        0 0 20px rgba(0,255,65,0.3),
+        inset 0 0 20px rgba(0,255,65,0.05);
       z-index: 10;
-      animation: float 6s ease-in-out infinite;
+      animation: float 8s ease-in-out infinite;
     }
     .notes-title {
-      font-size: 18px;
-      margin-bottom: 12px;
-      color: #ff99ee;
-      text-shadow: 0 0 10px #ff00aa;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 20px;
+      color: #00ff41;
+      text-shadow: 0 0 10px #00ff41;
+      margin-bottom: 16px;
+      letter-spacing: 1px;
     }
     .note {
       display: flex;
       align-items: center;
-      margin-bottom: 12px;
-      animation: slideIn 0.6s ease-out forwards;
+      margin-bottom: 14px;
+      padding: 8px;
+      border-left: 3px solid #00ff41;
+      background: rgba(0,255,65,0.03);
+      border-radius: 0 8px 8px 0;
       opacity: 0;
-      transform: translateX(-30px);
+      transform: translateX(-40px);
+      animation: slideIn 0.7s ease-out forwards;
     }
+    .note:nth-child(1) { animation-delay: 0.3s; }
+    .note:nth-child(2) { animation-delay: 0.6s; }
+    .note:nth-child(3) { animation-delay: 0.9s; }
     .note img {
-      width: 36px;
-      height: 36px;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
-      margin-right: 10px;
-      border: 2px solid #ff00aa;
-      box-shadow: 0 0 15px #ff00aa88;
+      margin-right: 12px;
+      border: 2px solid #00ff41;
+      box-shadow: 0 0 20px #00ff4188;
     }
     .note-text {
-      font-size: 14px;
-      color: #e0d0ff;
+      font-size: 15px;
+      line-height: 1.4;
     }
-    .note-user { color: #ff99ee; font-weight: bold; }
+    .note-user {
+      color: #00ff88;
+      font-weight: bold;
+      font-family: 'Orbitron', sans-serif;
+    }
 
-    /* Pin Button */
-    .pin-btn {
+    /* Summon Button */
+    .summon-btn {
       position: absolute;
       bottom: 30px;
       left: 50%;
       transform: translateX(-50%);
-      background: linear-gradient(45deg, #ff00aa, #aa00ff);
-      color: white;
-      border: none;
-      padding: 14px 40px;
-      font-size: 18px;
+      background: linear-gradient(45deg, #000, #003300);
+      color: #00ff41;
+      border: 2px solid #00ff41;
+      padding: 16px 50px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 20px;
       font-weight: bold;
       border-radius: 50px;
       cursor: pointer;
-      box-shadow: 0 0 30px #ff00aa88;
+      box-shadow: 
+        0 0 30px #00ff4188,
+        inset 0 0 20px rgba(0,255,65,0.2);
       z-index: 10;
-      animation: pulse 2s infinite;
+      animation: pulse 3s infinite;
       transition: all 0.3s;
+      letter-spacing: 2px;
     }
-    .pin-btn:hover {
+    .summon-btn:hover {
       transform: translateX(-50%) scale(1.1);
-      box-shadow: 0 0 50px #ff00aa;
+      box-shadow: 0 0 50px #00ff41;
+      background: #001100;
     }
 
     /* Animations */
-    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-    @keyframes pulse { 0% { box-shadow: 0 0 30px #ff00aa88; } 50% { box-shadow: 0 0 50px #ff00aa; } 100% { box-shadow: 0 0 30px #ff00aa88; } }
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 30px #00ff4188; } 50% { box-shadow: 0 0 50px #00ff41; } }
     @keyframes slideIn { to { opacity:1; transform:translateX(0); } }
 
-    /* Custom cluster style */
+    /* Custom Cluster */
     .ritual-cluster {
-      background: rgba(170,0,255,0.2) !important;
-      border: 3px solid #ff00aa !important;
-      box-shadow: 0 0 20px #ff00aa !important;
+      background: rgba(0,255,65,0.15) !important;
+      border: 3px solid #00ff41 !important;
+      box-shadow: 0 0 30px #00ff41 !important;
     }
     .ritual-cluster div {
-      background: linear-gradient(45deg, #ff00aa, #aa00ff) !important;
-      color: white !important;
+      background: linear-gradient(45deg, #00ff41, #00cc33) !important;
+      color: black !important;
       font-weight: bold !important;
+      font-family: 'Orbitron', sans-serif !important;
     }
 
-    /* Avatar glow */
-    .ritual-avatar {
-      filter: drop-shadow(0 0 10px #ff00aa) drop-shadow(0 0 20px #aa00ff);
-      animation: avatarGlow 4s ease-in-out infinite alternate;
+    .ritual-avatar img {
+      filter: drop-shadow(0 0 15px #00ff41) drop-shadow(0 0 30px #00ff4188);
+      animation: glow 4s ease-in-out infinite alternate;
     }
-    @keyframes avatarGlow { from { filter: drop-shadow(0 0 10px #ff00aa); } to { filter: drop-shadow(0 0 25px #ff00aa); } }
+    @keyframes glow { from { filter: drop-shadow(0 0 15px #00ff41); } to { filter: drop-shadow(0 0 30px #00ff41); } }
   </style>
 </head>
 <body>
@@ -182,77 +208,100 @@
   <div id="map"></div>
 
   <div class="header">
-    <div class="logo">✦ RITUALNET</div>
-    <div class="view-toggle">
-      <label>Avatar View</label>
+    <div class="logo">RITUALNET</div>
+    <div class="toggle-container">
+      <span class="toggle-label">Avatar</span>
       <label class="switch">
         <input type="checkbox" id="viewMode">
         <span class="slider"></span>
       </label>
-      <label>Cluster View</label>
+      <span class="toggle-label">Cluster</span>
     </div>
   </div>
 
-  <div class="notes-panel">
-    <div class="notes-title">Recent Rituals</div>
-    <div class="note"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=fallenabdillah" alt=""><div><span class="note-user">@fallenabdillah</span><br>"Ritualnet basecamp Jakarta Selatan"</div></div>
-    <div class="note"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=CyriptoMemo" alt=""><div><span class="note-user">@CyriptoMemo</span><br>"GM Ritual frens 🧿"</div></div>
-    <div class="note"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=evemeowy" alt=""><div><span class="note-user">@evemeowy</span><br>"summoning the chain spirits tonight"</div></div>
+  <!-- Recent Notes - Only shows real user pins -->
+  <div class="notes-panel" id="notesPanel">
+    <div class="notes-title">Recent Summonings</div>
+    <div id="notesList">
+      <!-- Real pins will appear here automatically -->
+    </div>
   </div>
 
-  <button class="pin-btn">✦ Summon on Map ✦</button>
+  <button class="summon-btn" id="summonBtn">SUMMON ON MAP</button>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
   <script>
-    const map = L.map('map', {
-      zoomControl: false,
-      attributionControl: false
-    }).setView([-2.5, 117], 3);
+    // Initialize map
+    const map = L.map('map').setView([0, 0], 2);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{retina}.png', {
+      attribution: '',
       maxZoom: 19
     }).addTo(map);
 
     const avatars = L.layerGroup().addTo(map);
-    const clusters = new L.MarkerClusterGroup({
-      spiderfyOnMaxZoom: true,
-      showCoverageOnHover: false,
-      zoomToBoundsOnClick: true,
-      iconCreateFunction: function(cluster) {
-        return L.divIcon({
-          html: `<div><span>${cluster.getChildCount()}</span></div>`,
-          className: 'ritual-cluster',
-          iconSize: L.point(50, 50)
-        });
-      }
+    const clusters = L.markerClusterGroup({
+      iconCreateFunction: cluster => L.divIcon({
+        html: `<div><span>${cluster.getChildCount()}</span></div>`,
+        className: 'ritual-cluster',
+        iconSize: [60, 60]
+      })
     }).addTo(map);
 
-    // Sample Ritualnet community pins (add as many as you want)
-    const ritualPins = [
-      {lat: -6.2088, lng: 106.8456, user: "fallenabdillah", msg: "Jakarta Ritual Hub", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=fallenabdillah"},
-      {lat: 37.7749, lng: -122.4194, user: "CryptoWitch", msg: "SF Summoning Circle", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=CryptoWitch"},
-      {lat: 51.5074, lng: -0.1278, user: "ChainPriest", msg: "London Node Active", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=ChainPriest"},
-      {lat: 1.3521, lng: 103.8198, user: "SG_Ritualist", msg: "Singapore Gateway", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=SG_Ritualist"},
-      {lat: -6.9147, lng: 107.6098, user: "BandungMage", msg: "Bandung Basecamp", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=BandungMage"},
-      // Add 100+ more if you want real density
-    ];
+    // This will store real user pins
+    let userPins = [];
+    const notesList = document.getElementById('notesList');
 
-    ritualPins.forEach((pin, i) => {
+    function addPin(lat, lng, username, message, avatarSeed = username) {
+      const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatarSeed}&backgroundColor=000000`;
+
       const icon = L.divIcon({
         className: 'ritual-avatar',
-        html: `<img src="${pin.avatar}" style="width:50px;height:50px;border-radius:50%;border:3px solid #ff00aa;">`,
-        iconSize: [50,50],
-        iconAnchor: [25,50]
+        html: `<img src="${avatarUrl}" style="width:54px;height:54px;border-radius:50%;border:3px solid #00ff41;">`,
+        iconSize: [54, 54],
+        iconAnchor: [27, 54]
       });
 
-      const marker = L.marker([pin.lat, pin.lng], { icon: icon });
-      marker.bindPopup(`<b>@${pin.user}</b><br>${pin.msg}`);
-      
+      const marker = L.marker([lat, lng], { icon });
+      marker.bindPopup(`
+        <div style="color:#0f0;font-family:Rajdhani;background:#000;padding:10px;border:1px solid #0f0;border-radius:8px;">
+          <b style="color:#00ff41;">@${username}</b><br>
+          <i>"${message}"</i>
+        </div>
+      `);
+
       avatars.addLayer(marker);
       clusters.addLayer(marker);
-    });
 
-    // Toggle between avatar & cluster view
-    document.getElementById('viewMode').addEventListener('change', function(e) {
+      // Add to recent notes (only real pins!)
+      userPins.push({ username, message, avatarUrl });
+      if (userPins.length > 3) userPins.shift();
+
+      updateRecentNotes();
+      map.setView([lat, lng], 6, { animate: true });
+    }
+
+    function updateRecentNotes() {
+      notesList.innerHTML = '';
+      userPins.slice().reverse().forEach(pin => {
+        const note = document.createElement('div');
+        note.className = 'note';
+        note.innerHTML = `
+          <img src="${pin.avatarUrl}" alt="${pin.username}">
+          <div class="note-text">
+            <div class="note-user">@${pin.username}</div>
+            "${pin.message}"
+          </div>
+        `;
+        notesList.appendChild(note);
+      });
+    }
+
+    // Toggle view
+    document.getElementById('viewMode').addEventListener('change', function() {
       if (this.checked) {
         map.removeLayer(avatars);
         map.addLayer(clusters);
@@ -262,10 +311,35 @@
       }
     });
 
-    // Pin button (you can connect this to a backend later)
-    document.querySelector('.pin-btn').addEventListener('click', () => {
-      alert('✦ Summoning ritual in progress... ✦');
+    // Summon button - let user click anywhere to pin
+    let summoning = false;
+    document.getElementById('summonBtn').addEventListener('click', () => {
+      if (summoning) return;
+      summoning = true;
+      document.getElementById('summonBtn').textContent = "CLICK MAP TO SUMMON";
+      document.getElementById('summonBtn').style.background = "#003300";
+
+      const handler = (e) => {
+        const username = prompt("Your Ritualnet name:") || "anon_ritualist";
+        const message = prompt("Your summoning message:") || "joined the ritual";
+
+        addPin(e.latlng.lat, e.latlng.lng, username, message);
+        
+        map.off('click', handler);
+        summoning = false;
+        document.getElementById('summonBtn').textContent = "SUMMON ON MAP";
+        document.getElementById('summonBtn').style.background = "linear-gradient(45deg, #000, #003300)";
+      };
+
+      map.once('click', handler);
     });
+
+    // Optional: Auto-load some real-looking first pins
+    setTimeout(() => {
+      addPin(-6.2088, 106.8456, "ritualnet", "Jakarta Node Activated 🟢");
+      addPin(1.3521, 103.8198, "sg_ritual", "Singapore Gateway Online");
+      addPin(37.7749, -122.4194, "sf_witch", "San Francisco Circle Active");
+    }, 1000);
   </script>
 </body>
 </html>

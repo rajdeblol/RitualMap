@@ -24,56 +24,146 @@
       overflow: hidden;
       height: 100vh;
     }
-    #map {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      z-index: 1;
-    }
+    #map { position: absolute; top:0; left:0; width:100%; height:100%; z-index:1; }
 
     /* Header */
     .header {
       position: absolute;
       top: 0; left: 0; right: 0;
-      height: 70px;
-      background: linear-gradient(to bottom, rgba(0,20,0,0.95), transparent);
+      height: 80px;
+      background: linear-gradient(to bottom, rgba(0,30,0,0.95), transparent);
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 0 30px;
+      justify-content: center;
       z-index: 10;
-      border-bottom: 1px solid #00ff4133;
+      border-bottom: 1px solid #00ff4144;
     }
     .logo {
       font-family: 'Orbitron', sans-serif;
-      font-size: 36px;
+      font-size: 42px;
       font-weight: 900;
       color: #00ff41;
-      text-shadow: 0 0 20px #00ff41, 0 0 40px #00ff4188;
-      letter-spacing: 4px;
+      text-shadow: 0 0 30px #00ff41, 0 0 60px #00ff4188;
+      letter-spacing: 6px;
     }
 
-    /* Recent Summonings Panel */
+    /* Summon Button */
+    .summon-btn {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #000;
+      color: #00ff41;
+      border: 3px solid #00ff41;
+      padding: 20px 70px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 26px;
+      font-weight: 900;
+      border-radius: 60px;
+      cursor: pointer;
+      box-shadow: 0 0 50px #00ff4188;
+      z-index: 10;
+      animation: pulse 3s infinite;
+      transition: all 0.4s;
+    }
+    .summon-btn:hover { transform: translateX(-50%) scale(1.15); box-shadow: 0 0 80px #00ff41; }
+
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 50px #00ff4188; } 50% { box-shadow: 0 0 90px #00ff41; } }
+
+    /* Modal Card */
+    .modal {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.95);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+    .card {
+      width: 420px;
+      background: #000;
+      border: 2px solid #00ff41;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 0 60px rgba(0,255,65,0.6);
+      text-align: center;
+      animation: cardPop 0.6s ease-out;
+    }
+    @keyframes cardPop { from { transform: scale(0.7); opacity:0; } to { transform: scale(1); opacity:1; } }
+
+    .card h2 {
+      font-family: 'Orbitron', sans-serif;
+      color: #00ff41;
+      font-size: 28px;
+      text-shadow: 0 0 20px #00ff41;
+      margin-bottom: 20px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 14px;
+      margin: 12px 0;
+      background: #001100;
+      border: 1px solid #00ff41;
+      border-radius: 12px;
+      color: #0f0;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 16px;
+    }
+    textarea { height: 100px; resize: none; }
+
+    .pfp-preview {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 4px solid #00ff41;
+      margin: 15px auto;
+      object-fit: cover;
+      box-shadow: 0 0 40px #00ff4188;
+    }
+
+    .file-label {
+      display: block;
+      padding: 14px;
+      background: #001100;
+      border: 2px dashed #00ff41;
+      border-radius: 12px;
+      cursor: pointer;
+      margin: 15px 0;
+      transition: 0.3s;
+    }
+    .file-label:hover { background: #002200; }
+
+    .submit-btn {
+      background: #00ff41;
+      color: #000;
+      border: none;
+      padding: 16px 40px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 20px;
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      margin-top: 20px;
+      box-shadow: 0 0 30px #00ff41;
+    }
+
+    /* Recent Summonings */
     .summonings-panel {
       position: absolute;
       left: 20px;
-      bottom: 100px;
+      bottom: 120px;
       width: 380px;
       background: rgba(0,15,0,0.95);
       border: 1px solid #00ff41;
       border-radius: 16px;
       padding: 20px;
-      box-shadow: 0 0 30px rgba(0,255,65,0.4);
-      backdrop-filter: blur(10px);
+      box-shadow: 0 0 40px rgba(0,255,65,0.4);
       z-index: 10;
-      animation: float 7s ease-in-out infinite;
     }
-    .title {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 22px;
-      color: #00ff41;
-      text-shadow: 0 0 15px #00ff41;
-      margin-bottom: 16px;
-    }
+    .title { font-family: 'Orbitron', sans-serif; color: #00ff41; font-size: 22px; text-shadow: 0 0 15px; margin-bottom: 16px; }
     .summoning {
       display: flex;
       align-items: center;
@@ -82,62 +172,13 @@
       background: rgba(0,255,65,0.05);
       border-left: 4px solid #00ff41;
       border-radius: 0 10px 10px 0;
-      opacity: 0;
-      transform: translateX(-50px);
-      animation: slideIn 0.8s ease-out forwards;
     }
-    .summoning:nth-child(1) { animation-delay: 0.2s; }
-    .summoning:nth-child(2) { animation-delay: 0.4s; }
-    .summoning:nth-child(3) { animation-delay: 0.6s; }
-    .summoning img {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      margin-right: 14px;
-      border: 3px solid #00ff41;
-      box-shadow: 0 0 25px #00ff4188;
-    }
-    .text {
-      font-size: 15px;
-    }
-    .username {
-      color: #00ff88;
-      font-weight: bold;
-      font-family: 'Orbitron', sans-serif;
-    }
+    .summoning img { width: 50px; height: 50px; border-radius: 50%; border: 3px solid #00ff41; margin-right: 14px; box-shadow: 0 0 25px #00ff4188; }
+    .username { color: #00ff88; font-weight: bold; font-family: 'Orbitron', sans-serif; }
 
-    /* Summon Button */
-    .summon-btn {
-      position: absolute;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #000;
-      color: #00ff41;
-      border: 2px solid #00ff41;
-      padding: 18px 60px;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 22px;
-      font-weight: 900;
-      border-radius: 50px;
-      cursor: pointer;
-      box-shadow: 0 0 40px #00ff4188;
-      z-index: 10;
-      animation: pulse 2.5s infinite;
-      transition: all 0.3s;
-    }
-    .summon-btn:hover {
-      transform: translateX(-50%) scale(1.1);
-      box-shadow: 0 0 60px #00ff41;
-    }
-
-    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
-    @keyframes pulse { 0%,100% { box-shadow: 0 0 40px #00ff4188; } 50% { box-shadow: 0 0 70px #00ff41; } }
-    @keyframes slideIn { to { opacity:1; transform:translateX(0); } }
-
-    /* Avatar Glow */
+    /* Avatar glow */
     .ritual-marker img {
-      filter: drop-shadow(0 0 20px #00ff41) drop-shadow(0 0 40px #00ff4188);
+      filter: drop-shadow(0 0 25px #00ff41);
       animation: glow 4s ease-in-out infinite alternate;
     }
     @keyframes glow { from { filter: drop-shadow(0 0 20px #00ff41); } to { filter: drop-shadow(0 0 40px #00ff41); } }
@@ -151,88 +192,117 @@
     <div class="logo">RITUALNET</div>
   </div>
 
+  <button class="summon-btn" id="summonBtn">SUMMON ON MAP</button>
+
+  <!-- Recent Summonings -->
   <div class="summonings-panel">
     <div class="title">Recent Summonings</div>
     <div id="summoningsList"></div>
   </div>
 
-  <button class="summon-btn" id="summonBtn">SUMMON ON MAP</button>
+  <!-- Modal Card -->
+  <div class="modal" id="summonModal">
+    <div class="card">
+      <h2>PERFORM THE RITUAL</h2>
+      <img src="" alt="PFP Preview" class="pfp-preview" id="pfpPreview">
+      <label class="file-label">Upload Your Avatar</label>
+      <input type="file" id="pfpInput" accept="image/*" style="display:none;">
+      
+      <input type="text" id="usernameInput" placeholder="X / Twitter username (e.g. vitalik)">
+      <textarea id="pledgeInput" placeholder="Speak your pledge to the Ritualnet..."></textarea>
+      
+      <button class="submit-btn" id="submitRitual">JOIN THE CIRCLE</button>
+    </div>
+  </div>
 
   <script>
-    // Dark black map (exactly like Succinct Map)
     const map = L.map('map').setView([20, 0], 2);
     L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
-      attribution: '',
-      maxZoom: 19
+      maxZoom: 19,
+      attribution: ''
     }).addTo(map);
 
     const markers = L.layerGroup().addTo(map);
-    const recentList = document.getElementById('summoningsList');
+    const list = document.getElementById('summoningsList');
     let summonings = [];
+    let selectedLatLng = null;
 
-    function updateRecent() {
-      recentList.innerHTML = '';
-      summonings.slice(-3).reverse().forEach(s => {
-        const div = document.createElement('div');
-        div.className = 'summoning';
-        div.innerHTML = `
-          <img src="${s.pfp}" alt="@${s.username}">
-          <div class="text">
-            <div class="username">@${s.username}</div>
-            "${s.pledge}"
-          </div>
-        `;
-        recentList.appendChild(div);
-      });
-    }
-
-    document.getElementById('summonBtn').addEventListener('click', () => {
-      alert("Click anywhere on the map to begin your summoning ritual...");
+    // Open modal when clicking summon button
+    document.getElementById('summonBtn').onclick = () => {
+      document.getElementById('summonModal').style.display = 'flex';
+      alert("Now click anywhere on the map to choose your summoning location...");
       
       const clickHandler = (e) => {
+        selectedLatLng = e.latlng;
         map.off('click', clickHandler);
-
-        const username = prompt("Enter your X / Twitter username (without @):", "")?.trim();
-        if (!username) return alert("Username required to summon.");
-
-        const pledge = prompt("Speak your pledge to the Ritualnet:", "I am here to build the future")?.trim();
-        if (!pledge) return alert("A pledge is required to join the circle.");
-
-        // Use Twitter PFP (via avatar API)
-        const pfp = `https://unavatar.io/x/${username}`;
-
-        const icon = L.divIcon({
-          className: 'ritual-marker',
-          html: `<img src="${pfp}" onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=${username}'" style="width:60px;height:60px;border-radius:50%;border:4px solid #00ff41;">`,
-          iconSize: [60, 60],
-          iconAnchor: [30, 60]
-        });
-
-        const marker = L.marker(e.latlng, { icon }).addTo(markers);
-        marker.bindPopup(`
-          <div style="background:#000;color:#0f0;padding:12px;border:2px solid #0f0;border-radius:12px;text-align:center;">
-            <img src="${pfp}" width="60" height="60" style="border-radius:50%;border:3px solid #0f0;margin-bottom:8px;">
-            <br><b style="color:#00ff41;">@${username}</b>
-            <br><i>"${pledge}"</i>
-          </div>
-        `).openPopup();
-
-        // Save & show in recent
-        summonings.push({ username, pledge, pfp, lat: e.latlng.lat, lng: e.latlng.lng });
-        updateRecent();
-
-        map.setView(e.latlng, 8, { animate: true });
       };
-
       map.once('click', clickHandler);
-    });
+    };
 
-    // Optional: Welcome message
-    setTimeout(() => {
-      if (summonings.length === 0) {
-        alert("Welcome to Ritualnet.\nClick 'SUMMON ON MAP' and place your mark on the world.");
+    // PFP Upload Preview
+    document.getElementById('pfpInput').onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          document.getElementById('pfpPreview').src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
       }
-    }, 1500);
+    };
+
+    // Trigger file input
+    document.querySelector('.file-label').onclick = () => {
+      document.getElementById('pfpInput').click();
+    };
+
+    // Submit Ritual
+    document.getElementById('submitRitual').onclick = () => {
+      const username = document.getElementById('usernameInput').value.trim() || "ritualist";
+      const pledge = document.getElementById('pledgeInput').value.trim() || "I have joined the circle.";
+      const pfpSrc = document.getElementById('pfpPreview').src;
+
+      if (!selectedLatLng) return alert("Please select a location on the map first.");
+      if (pfpSrc.includes('data:image') === false) return alert("Please upload your avatar.");
+
+      // Create marker
+      const icon = L.divIcon({
+        className: 'ritual-marker',
+        html: `<img src="${pfpSrc}" style="width:64px;height:64px;border-radius:50%;border:4px solid #00ff41;">`,
+        iconSize: [64, 64],
+        iconAnchor: [32, 64]
+      });
+
+      const marker = L.marker(selectedLatLng, { icon }).addTo(markers);
+      marker.bindPopup(`
+        <div style="background:#000;color:#0f0;padding:15px;border:2px solid #0f0;border-radius:12px;text-align:center;">
+          <img src="${pfpSrc}" width="70" style="border-radius:50%;border:3px solid #0f0;margin-bottom:10px;">
+          <br><b style="color:#00ff41;">@${username}</b>
+          <br><i>"${pledge}"</i>
+        </div>
+      `).openPopup();
+
+      // Add to recent
+      summonings.push({ username, pledge, pfp: pfpSrc });
+      if (summonings.length > 3) summonings.shift();
+
+      list.innerHTML = '';
+      summonings.slice().reverse().forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'summoning';
+        div.innerHTML = `<img src="${s.pfp}"><div><div class="username">@${s.username}</div>"${s.pledge}"</div>`;
+        list.appendChild(div);
+      });
+
+      // Close modal
+      document.getElementById('summonModal').style.display = 'none';
+      document.getElementById('pfpPreview').src = '';
+      document.getElementById('usernameInput').value = '';
+      document.getElementById('pledgeInput').value = '';
+      selectedLatLng = null;
+
+      map.setView(selectedLatLng, 8, { animate: true });
+    };
   </script>
 </body>
 </html>

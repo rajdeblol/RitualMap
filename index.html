@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -114,7 +113,7 @@
       font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;cursor:pointer;box-shadow:0 0 60px #00ff41;transition:0.4s;}
     .join-btn:hover{transform:scale(1.1);box-shadow:0 0 100px #00ff41;}
 
-    /* SUCCESS — 100% CENTERED, NO FLICKER, NO JUMP */
+    /* SUCCESS — NOW WITH FULL GLOWING CIRCLE + CENTERED */
     .success{
       position:fixed;top:0;left:0;width:100%;height:100%;background:#000;
       display:flex;align-items:center;justify-content:center;flex-direction:column;
@@ -133,20 +132,25 @@
       margin-top:20px;font-size:20px;opacity:0;
       animation:fadeIn 1s ease 0.5s forwards;
     }
+
+    /* EXPANDING GREEN CIRCLE ANIMATION */
     .ritual-circle{
       position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-      width:0;height:0;border:3px solid #00ff41;
-      border-radius:50%;box-shadow:0 0 80px #00ff41, inset 0 0 60px #00ff41;
-      animation:expandGlow 2.5s ease-out forwards;opacity:0;z-index:1;
+      width:0;height:0;
+      border:4px solid #00ff41;
+      border-radius:50%;
+      box-shadow:0 0 80px #00ff41, 0 0 120px #00ff41, inset 0 0 60px #00ff41;
+      animation:expandGlow 2.5s ease-out forwards;
+      opacity:0;z-index:1;
     }
     @keyframes expandGlow{
-      0%{width:0;height:0;opacity:1;}
-      70%{width:400px;height:400px;opacity:0.6;}
-      100%{width:500px;height:500px;opacity:0;}
+      0%  {width:0;height:0;opacity:1;transform:translate(-50%,-50%) scale(0);}
+      60% {width:380px;height:380px;opacity:0.8;transform:translate(-50%,-50%) scale(1);}
+      100%{width:500px;height:500px;opacity:0;transform:translate(-50%,-50%) scale(1.2);}
     }
     @keyframes fadeIn{to{opacity:0.8;}}
 
-    /* PANEL */
+    /* PANEL — SHOW ONLY LAST 3 SUMMONINGS */
     .panel{
       position:absolute;left:20px;bottom:20px;width:380px;max-height:calc(100vh - 180px);
       background:#000;border:3px solid #00ff41;border-radius:25px;
@@ -235,7 +239,7 @@
   <!-- SUBTITLE -->
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
-  <!-- PANEL -->
+  <!-- PANEL — LAST 3 ONLY -->
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent"></div>
@@ -255,7 +259,7 @@
     </div>
   </div>
 
-  <!-- SUCCESS — PERFECTLY CENTERED, NO FLICKER -->
+  <!-- SUCCESS — WITH EXPANDING CIRCLE -->
   <div class="success" id="success">
     <div class="ritual-circle"></div>
     <h1>YOU ARE RITUALIZED</h1>
@@ -314,7 +318,10 @@
       markers.clearLayers(); 
       recent.innerHTML = '';
 
-      summonings.slice(-10).reverse().forEach(s => {
+      // SHOW ONLY LAST 3 (MOST RECENT)
+      const latestThree = summonings.slice(-3).reverse();
+
+      latestThree.forEach(s => {
         const icon = createIcon(s.avatar || 'ritualnet-logo.png');
         const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
 

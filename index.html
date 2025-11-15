@@ -92,21 +92,23 @@
     function createIcon(src) {
       return L.divIcon({
         className: 'ritual-marker',
-        html: `<img src="${src}" style="width:50px;height:50px;">`,
+        html: `<img src="${src}" style="width:50px;height:50px;border-radius:50%;border:3px solid #00ff41;">`,
         iconSize: [50, 50],
         iconAnchor: [25, 25]
       });
     }
 
     function render(summonings) {
-      const deduped = summonings.filter((s, i, a) => a.findIndex(t => t.id === s.id) === i).slice(-3).reverse();
+      const seen = new Set();
+      const deduped = summonings.filter(s => s.id && !seen.has(s.id) && seen.add(s.id)).slice(-3).reverse();
+
       markers.clearLayers();
       recent.innerHTML = '';
 
       deduped.forEach(s => {
         const icon = createIcon(s.avatar || 'https://i.imgur.com/8Y7K8vP.png');
         const m = L.marker([s.lat, s.lng], { icon }).addTo(markers);
-        m.bindPopup(`<img src="${s.avatar || 'https://i.imgur.com/8Y7K8vP.png'}"><b>@${s.name}</b><i>"${s.pledge}"</i>`);
+        m.bindPopup(`<div style="text-align:center;"><img src="${s.avatar || 'https://i.imgur.com/8Y7K8vP.png'}" style="width:70px;height:70px;border-radius:50%;border:3px solid #00ff41;"><br><b>@${s.name}</b><br><i>"${s.pledge}"</i></div>`);
 
         const entry = document.createElement('div');
         entry.className = 'entry';
@@ -115,7 +117,7 @@
       });
     }
 
-    async function sync() {
+    async function loadData() {
       try {
         const res = await fetch(`${API_BASE}/load`);
         if (!res.ok) throw new Error();
@@ -127,8 +129,8 @@
       }
     }
 
-    sync();
-    setInterval(sync, 3000); // GLOBAL SYNC
+    loadData();
+    setInterval(loadData, 3000);
 
     map.on('click', e => {
       clickedPos = e.latlng;
@@ -154,10 +156,10 @@
     };
 
     document.querySelector('.join-btn').onclick = async () => {
+      if (!clickedPos) return;
       const avatar = document.getElementById('avatarPreview').src;
       const name = document.getElementById('username').value.trim() || "ritualist";
       const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
-      if (!clickedPos) return;
 
       const payload = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng };
 
@@ -173,7 +175,7 @@
           const current = JSON.parse(localStorage.getItem('ritualnet') || '[]');
           current.push(result.data);
           localStorage.setItem('ritualnet', JSON.stringify(current));
-          render(current); // INSTANT
+          render(current); // INSTANT MARKER
         }
       } catch (e) {}
 

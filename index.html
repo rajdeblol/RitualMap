@@ -191,7 +191,7 @@
 
     /* POPUP */
     .leaflet-popup-content-wrapper {
-      background: #000 !important; color: #0f0 tentang !important;
+      background: #000 !important; color: #0f0 !important;
       border: 3px solid #00ff41 !important; border-radius: 20px !important;
       padding: 0 !important; box-shadow: 0 0 40px rgba(0,255,65,0.6) !important;
     }
@@ -216,22 +216,19 @@
 </head>
 <body>
 
-  <div id="map"></div><!-- TITLE BAR -->
+  <div id="map"></div>
   <div class="title-bar">
     <div id="ritualLogo"><img src="ritualnet-logo.png"></div>
     <div class="title-text" id="titleLink">RITUALNET</div>
   </div>
 
-  <!-- SUBTITLE -->
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
-  <!-- PANEL -->
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent"></div>
   </div>
 
-  <!-- MODAL -->
   <div class="modal" id="ritualModal">
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
@@ -245,14 +242,12 @@
     </div>
   </div>
 
-  <!-- SUCCESS -->
   <div class="success" id="success">
     <div class="ritual-circle"></div>
     <h1>YOU ARE RITUALIZED</h1>
     <p>The circle grows stronger.</p>
   </div>
 
-  <!-- RESET CONFIRM -->
   <div id="resetConfirm">
     <div>RESET THE CIRCLE?</div>
     <button id="confirmReset">BURN IT ALL</button>
@@ -277,11 +272,12 @@
       return 65;
     }
 
+    // FIXED: USE BACKTICKS + TEMPLATE LITERALS
     function createIcon(src) {
       const s = getSize();
       return L.divIcon({
         className: 'ritual-marker',
-        html: `<img src="${src}" style="width:${s}px;height:${s}px;">`,
+        html: `<img src="${src}" style="width:${s}px;height:${s}px;border-radius:50%;border:4px solid #00ff41;box-shadow:0 0 30px #00ff41;">`,
         iconSize: [s, s],
         iconAnchor: [s/2, s/2]
       });
@@ -296,15 +292,10 @@
 
     function loadAll() {
       let summonings = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
-
-      // Deduplicate by ID
       const seen = new Set();
       summonings = summonings.filter(s => s.id && !seen.has(s.id) && seen.add(s.id));
-
       markers.clearLayers(); 
       recent.innerHTML = '';
-
-      // LAST 3 ONLY
       const latestThree = summonings.slice(-3).reverse();
 
       latestThree.forEach(s => {
@@ -313,7 +304,7 @@
 
         m.bindPopup(`
           <div style="position:relative;text-align:center;">
-            <img src="${s.avatar || 'ritualnet-logo.png'}">
+            <img src="${s.avatar || 'ritualnet-logo.png'}" style="width:80px;height:80px;border-radius:50%;border:4px solid #00ff41;">
             <b>@${s.name}</b>
             <i>"${s.pledge}"</i>
           </div>
@@ -371,7 +362,7 @@
         timestamp: Date.now() 
       };
 
-      // SEND TO VERCEL GLOBAL SERVER
+      // VERCEL GLOBAL
       try {
         const res = await fetch('/api/join', {
           method: 'POST',
@@ -387,7 +378,7 @@
         }
       } catch (e) {}
 
-      // YOUR ORIGINAL FIREBASE + LOCAL CODE — UNCHANGED
+      // FIREBASE + LOCAL
       if (window.__firebase) {
         const newRef = window.__firebase.push(window.__firebase.summoningsRef, payload);
         const newSummon = { id: newRef.key, ...payload };
@@ -433,7 +424,7 @@
       document.getElementById('resetConfirm').style.display = 'none';
     };
 
-    // GLOBAL REAL-TIME SYNC VIA VERCEL (FALLBACK)
+    // GLOBAL SYNC
     async function syncGlobal() {
       try {
         const res = await fetch('/api/load');
@@ -447,7 +438,7 @@
     syncGlobal();
     setInterval(syncGlobal, 3000);
 
-    // YOUR ORIGINAL FIREBASE SYNC — STILL ACTIVE
+    // FIREBASE SYNC
     if (window.__firebase) {
       const { onValue, summoningsRef } = window.__firebase;
       onValue(summoningsRef, (snap) => {

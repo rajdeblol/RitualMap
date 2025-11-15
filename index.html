@@ -4,86 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>RITUALNET</title>
+
+  <!-- Leaflet CSS & JS (unchanged) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- Supabase client (minimal replacement for Firebase) -->
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-    // ← REPLACE THESE
-    const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpgv.supabase.co'; // your project URL
-    const SUPABASE_KEY = '<REPLACE_WITH_ANON_KEY>'; // put anon key or a short-lived user JWT (NOT service_role)
-
-    // init client (will be null if key not provided)
-    let supabase = null;
-    try {
-      if (SUPABASE_URL && SUPABASE_KEY && SUPABASE_KEY.indexOf('<REPLACE') === -1) {
-        supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { realtime: { params: { eventsPerSecond: 5 } }});
-      } else {
-        console.info('Supabase key not set — running local-only.');
-      }
-    } catch (e) {
-      console.warn('Supabase init failed', e);
-      supabase = null;
-    }
-
-    const TABLE = 'summonings'; // table name in your Supabase DB
-
-    // push a single item (INSERT)
-    async function push(item) {
-      if (!supabase) return false;
-      try {
-        const { error } = await supabase.from(TABLE).insert([item]);
-        if (error) { console.warn('supabase insert error', error); return false; }
-        return true;
-      } catch (err) {
-        console.warn('supabase push error', err);
-        return false;
-      }
-    }
-
-    // remove all rows (DELETE) — will only work if your RLS/policies/keys permit it
-    async function removeAll() {
-      if (!supabase) return false;
-      try {
-        const { error } = await supabase.from(TABLE).delete().neq('id', '');
-        if (error) { console.warn('supabase delete error', error); return false; }
-        return true;
-      } catch (err) {
-        console.warn('supabase removeAll error', err);
-        return false;
-      }
-    }
-
-    // onValue: call callback with a snap-like object { val: () => rowsArray }
-    // and subscribe to realtime table changes (simple approach: re-query on any change)
-    function onValue(callback) {
-      if (!supabase) return () => {};
-      // initial fetch
-      supabase.from(TABLE).select('*').order('timestamp', { ascending: true }).then(({ data, error }) => {
-        callback({ val: () => data || [] });
-      });
-
-      // subscribe to changes and re-fetch
-      const chan = supabase
-        .channel('public:' + TABLE)
-        .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, () => {
-          supabase.from(TABLE).select('*').order('timestamp', { ascending: true }).then(({ data }) => {
-            callback({ val: () => data || [] });
-          });
-        })
-        .subscribe();
-
-      // return unsubscribe function
-      return () => {
-        try { supabase.removeChannel(chan); } catch (e) { /* ignore */ }
-      };
-    }
-
-    // expose small compat object (like previous window.__firebase surface)
-    window.__supabase = { supabase, push, removeAll, onValue };
-  </script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
@@ -120,7 +44,6 @@
       text-shadow:0 0 60px #00ff4188;letter-spacing:12px;cursor:pointer;
       position:relative;
     }
-    /* SAME EXACT PULSE AS LOGO */
     .title-text::before{
       content:'RITUALNET';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
       font-size:56px;letter-spacing:12px;opacity:0.18;
@@ -129,7 +52,6 @@
       animation:ritualPulse 6s infinite ease-in-out;z-index:-1;
     }
 
-    /* ONE LINE ONLY — EXACTLY UNDER TITLE */
     .subtitle{
       position:absolute;top:100px;left:50%;transform:translateX(-50%);
       font-size:16px;letter-spacing:2px;color:#00ff88;
@@ -172,7 +94,6 @@
       font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;cursor:pointer;box-shadow:0 0 60px #00ff41;transition:0.4s;}
     .join-btn:hover{transform:scale(1.1);box-shadow:0 0 100px #00ff41;}
 
-    /* RESTORED ORIGINAL "YOU ARE RITUALIZED" ANIMATION */
     .success{
       position:fixed;top:0;left:0;width:100%;height:100%;background:#000;
       display:none;align-items:center;justify-content:center;flex-direction:column;
@@ -283,7 +204,7 @@
 
   <!-- TITLE BAR -->
   <div class="title-bar">
-    <div id="ritualLogo"><img src="ritualnet-logo.png"></div>
+    <div id="ritualLogo"><img src="ritualnet-logo.png" alt="ritual-logo"></div>
     <div class="title-text" id="titleLink">RITUALNET</div>
   </div>
 
@@ -301,7 +222,7 @@
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
       <h2>PERFORM THE RITUAL</h2>
-      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview"></div>
+      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview" alt="avatar"></div>
       <label class="upload-btn">UPLOAD AVATAR</label>
       <input type="file" id="avatarInput" accept="image/*" style="display:none;">
       <input type="text" class="input-field" id="username" placeholder="X / Twitter username">
@@ -310,7 +231,7 @@
     </div>
   </div>
 
-  <!-- SUCCESS — ORIGINAL ANIMATION RESTORED -->
+  <!-- SUCCESS -->
   <div class="success" id="success">
     <div class="ritual-circle"></div>
     <h1>YOU ARE RITUALIZED</h1>
@@ -324,6 +245,107 @@
     <button id="cancelReset">CANCEL</button>
   </div>
 
+  <!-- ---------- Safe Supabase loader (non-blocking) ---------- -->
+  <script>
+    /*
+      Minimal, safe Supabase integration:
+      - Replace URL and KEY below
+      - This loader attempts to load the UMD build of supabase.
+      - If it fails or you don't set the key, a harmless shim will be used so the page keeps working.
+    */
+    (function(){
+      const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpgv.supabase.co'; // <- replace if different
+      const SUPABASE_KEY = '<REPLACE_WITH_ANON_KEY>'; // <- REPLACE with anon key or user JWT (NOT service_role)
+      const UMD_SRC = 'https://unpkg.com/@supabase/supabase-js/dist/umd/supabase.js';
+
+      // default shim (no-op) so page never breaks
+      function installShim(){
+        window.__supabase = {
+          push: async () => { console.info('supabase.push skipped (shim)'); return false; },
+          removeAll: async () => { console.info('supabase.removeAll skipped (shim)'); return false; },
+          onValue: (cb) => { console.info('supabase.onValue skipped (shim)'); return () => {}; }
+        };
+      }
+
+      // If user didn't replace key, install shim and return
+      if (!SUPABASE_URL || !SUPABASE_KEY || SUPABASE_KEY.includes('<REPLACE')) {
+        console.info('Supabase not configured (no key) — using shim.');
+        installShim();
+        return;
+      }
+
+      // Dynamically load UMD script
+      const s = document.createElement('script');
+      s.src = UMD_SRC;
+      s.async = true;
+      s.onload = () => {
+        try {
+          // UMD exposes "supabase" global with createClient function
+          const createClient = window.supabase?.createClient || (window.supabasejs && window.supabasejs.createClient);
+          if (!createClient) {
+            console.warn('Supabase UMD loaded but createClient not found — using shim.');
+            installShim();
+            return;
+          }
+          const client = createClient(SUPABASE_URL, SUPABASE_KEY, { realtime: { params: { eventsPerSecond: 5 } }});
+          const TABLE = 'summonings';
+
+          // helper functions similar to previous Firebase surface
+          async function push(item){
+            try {
+              const { error } = await client.from(TABLE).insert([item]);
+              if (error){ console.warn('supabase insert error', error); return false; }
+              return true;
+            } catch (err) { console.warn('supabase push failed', err); return false; }
+          }
+
+          async function removeAll(){
+            try {
+              const { error } = await client.from(TABLE).delete().neq('id', '');
+              if (error){ console.warn('supabase delete error', error); return false; }
+              return true;
+            } catch (err) { console.warn('supabase removeAll failed', err); return false; }
+          }
+
+          function onValue(callback){
+            // initial fetch
+            client.from(TABLE).select('*').order('timestamp', { ascending: true }).then(({ data, error }) => {
+              if (error) console.warn('supabase initial select error', error);
+              callback({ val: () => data || [] });
+            });
+
+            // subscribe to changes and re-fetch on each event
+            const chan = client
+              .channel('public:' + TABLE)
+              .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, () => {
+                client.from(TABLE).select('*').order('timestamp', { ascending: true }).then(({ data }) => {
+                  callback({ val: () => data || [] });
+                });
+              })
+              .subscribe();
+
+            return () => {
+              try { client.removeChannel(chan); } catch (e) { /* ignore */ }
+            };
+          }
+
+          // expose a minimal compat object on window
+          window.__supabase = { supabase: client, push, removeAll, onValue };
+          console.info('Supabase loaded and initialized (window.__supabase).');
+        } catch (err) {
+          console.warn('Supabase loader error', err);
+          installShim();
+        }
+      };
+      s.onerror = () => {
+        console.warn('Failed to load Supabase UMD script — using shim.');
+        installShim();
+      };
+      document.head.appendChild(s);
+    })();
+  </script>
+
+  <!-- ---------- Main app script (unchanged behavior + minimal supabase calls) ---------- -->
   <script>
     const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([10, 0], 2);
     L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -338,4 +360,156 @@
       const z = map.getZoom();
       if (z <= 3) return 30;
       if (z <= 5) return 40;
-      if (
+      if (z <= 7) return 50;
+      return 65;
+    }
+
+    function createIcon(src) {
+      const s = getSize();
+      return L.divIcon({
+        className: 'ritual-marker',
+        html: `<img src="${src}" style="width:${s}px;height:${s}px;">`,
+        iconSize: [s, s],
+        iconAnchor: [s/2, s/2]
+      });
+    }
+
+    map.on('zoomend', () => {
+      markers.eachLayer(m => {
+        const data = m.options.data;
+        if (data?.avatar) m.setIcon(createIcon(data.avatar));
+      });
+    });
+
+    function loadAll() {
+      const summonings = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
+      markers.clearLayers(); recent.innerHTML = '';
+
+      summonings.slice(-10).reverse().forEach(s => {
+        const icon = createIcon(s.avatar || 'ritualnet-logo.png');
+        const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
+
+        m.bindPopup(`
+          <div style="position:relative;text-align:center;">
+            <img src="${s.avatar || 'ritualnet-logo.png'}">
+            <b>@${s.name}</b>
+            <i>"${s.pledge}"</i>
+          </div>
+        `);
+
+        const entry = document.createElement('div');
+        entry.className = 'entry';
+        entry.innerHTML = `
+          <img src="${s.avatar || 'ritualnet-logo.png'}">
+          <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
+        `;
+        recent.appendChild(entry);
+      });
+    }
+
+    loadAll();
+
+    document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
+
+    map.on('click', e => {
+      clickedPos = e.latlng;
+      document.getElementById('ritualModal').style.display = 'flex';
+      document.getElementById('avatarPreview').src = 'ritualnet-logo.png';
+      document.getElementById('username').value = '';
+      document.getElementById('pledge').value = '';
+    });
+
+    const closeModal = () => {
+      document.getElementById('ritualModal').style.display = 'none';
+      clickedPos = null;
+    };
+    document.getElementById('closeBtn').onclick = closeModal;
+    document.querySelector('.modal').onclick = e => { if (e.target.classList.contains('modal')) closeModal(); };
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    document.querySelector('.upload-btn').onclick = () => document.getElementById('avatarInput').click();
+    document.getElementById('avatarInput').onchange = e => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = ev => document.getElementById('avatarPreview').src = ev.target.result;
+        reader.readAsDataURL(file);
+      }
+    };
+
+    document.querySelector('.join-btn').onclick = () => {
+      const avatar = document.getElementById('avatarPreview').src;
+      const name = document.getElementById('username').value.trim() || "ritualist";
+      const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
+      if (!clickedPos) return;
+
+      const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
+      const all = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
+      all.push(newSummon);
+      localStorage.setItem('ritualnet_summonings', JSON.stringify(all));
+      loadAll();
+
+      // minimal supabase push (non-blocking)
+      if (window.__supabase && typeof window.__supabase.push === 'function') {
+        try { window.__supabase.push(newSummon); } catch(e){ console.warn('supabase push error', e); }
+      }
+
+      closeModal();
+      const success = document.getElementById('success');
+      success.classList.add('active');
+      setTimeout(() => {
+        success.classList.remove('active');
+        map.flyTo(clickedPos, 10, { duration: 1.8 });
+      }, 3200);
+    };
+
+    document.getElementById('ritualLogo').onclick = () => {
+      logoClicks++;
+      if (clickTimer) clearTimeout(clickTimer);
+      if (logoClicks === 7) {
+        document.getElementById('resetConfirm').style.display = 'flex';
+        logoClicks = 0;
+      } else {
+        clickTimer = setTimeout(() => { logoClicks = 0; }, 3000);
+      }
+    };
+
+    document.getElementById('confirmReset').onclick = () => {
+      localStorage.removeItem('ritualnet_summonings');
+      loadAll();
+      if (window.__supabase && typeof window.__supabase.removeAll === 'function') {
+        try { window.__supabase.removeAll(); } catch(e){ console.warn('supabase removeAll error', e); }
+      }
+      document.getElementById('resetConfirm').style.display = 'none';
+    };
+
+    document.getElementById('cancelReset').onclick = () => {
+      document.getElementById('resetConfirm').style.display = 'none';
+    };
+
+    // minimal supabase listener — will write remote rows to localStorage when available
+    (function attachSupabaseListener(){
+      // wait until __supabase exists (it is created by the loader script above)
+      const check = () => {
+        if (window.__supabase && typeof window.__supabase.onValue === 'function') {
+          try {
+            window.__supabase.onValue((snap) => {
+              const data = snap && typeof snap.val === 'function' ? snap.val() : snap;
+              const arr = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+              // write array to localStorage (overwrite local copy) and reload
+              if (arr.length) {
+                localStorage.setItem('ritualnet_summonings', JSON.stringify(arr));
+                loadAll();
+              }
+            });
+          } catch (e) { console.warn('attachSupabaseListener error', e); }
+        } else {
+          // try again shortly (supabase loader may still be loading)
+          setTimeout(check, 500);
+        }
+      };
+      check();
+    })();
+  </script>
+</body>
+</html>

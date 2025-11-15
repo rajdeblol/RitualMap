@@ -7,8 +7,26 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Supabase client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Firebase v9 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAsSQ-i34f0BErk3qwNMK4QET07FbCvjWk",
+      authDomain: "ritual-65fc5.firebaseapp.com",
+      databaseURL: "https://ritual-65fc5-default-rtdb.firebaseio.com",
+      projectId: "ritual-65fc5",
+      storageBucket: "ritual-65fc5.firebasestorage.app",
+      messagingSenderId: "249645412824",
+      appId: "1:249645412824:web:159f0919dd0c4c18fc02ad"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const summoningsRef = ref(db, 'ritualnet/summonings');
+    window.__firebase = { onValue, push, remove, summoningsRef };
+  </script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
@@ -45,6 +63,7 @@
       text-shadow:0 0 60px #00ff4188;letter-spacing:12px;cursor:pointer;
       position:relative;
     }
+    /* SAME EXACT PULSE AS LOGO */
     .title-text::before{
       content:'RITUALNET';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
       font-size:56px;letter-spacing:12px;opacity:0.18;
@@ -53,6 +72,7 @@
       animation:ritualPulse 6s infinite ease-in-out;z-index:-1;
     }
 
+    /* ONE LINE ONLY — EXACTLY UNDER TITLE */
     .subtitle{
       position:absolute;top:100px;left:50%;transform:translateX(-50%);
       font-size:16px;letter-spacing:2px;color:#00ff88;
@@ -95,6 +115,7 @@
       font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;cursor:pointer;box-shadow:0 0 60px #00ff41;transition:0.4s;}
     .join-btn:hover{transform:scale(1.1);box-shadow:0 0 100px #00ff41;}
 
+    /* RESTORED ORIGINAL "YOU ARE RITUALIZED" ANIMATION */
     .success{
       position:fixed;top:0;left:0;width:100%;height:100%;background:#000;
       display:none;align-items:center;justify-content:center;flex-direction:column;
@@ -123,6 +144,7 @@
     }
     @keyframes fadeIn{to{opacity:0.8;}}
 
+    /* PANEL */
     .panel{
       position:absolute;left:20px;bottom:20px;width:380px;max-height:calc(100vh - 180px);
       background:#000;border:3px solid #00ff41;border-radius:25px;
@@ -173,6 +195,7 @@
     #confirmReset{background:#00ff41;color:#000;box-shadow:0 0 60px #00ff41;}
     #cancelReset{background:#333;color:#00ff41;border:2px solid #00ff41;}
 
+    /* POPUP */
     .leaflet-popup-content-wrapper {
       background: #000 !important; color: #0f0 !important;
       border: 3px solid #00ff41 !important; border-radius: 20px !important;
@@ -201,18 +224,22 @@
 
   <div id="map"></div>
 
+  <!-- TITLE BAR -->
   <div class="title-bar">
     <div id="ritualLogo"><img src="ritualnet-logo.png"></div>
     <div class="title-text" id="titleLink">RITUALNET</div>
   </div>
 
+  <!-- ONE LINE ONLY -->
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
+  <!-- PANEL -->
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent"></div>
   </div>
 
+  <!-- MODAL -->
   <div class="modal" id="ritualModal">
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
@@ -226,12 +253,14 @@
     </div>
   </div>
 
+  <!-- SUCCESS — ORIGINAL ANIMATION RESTORED -->
   <div class="success" id="success">
     <div class="ritual-circle"></div>
     <h1>YOU ARE RITUALIZED</h1>
     <p>The circle grows stronger.</p>
   </div>
 
+  <!-- RESET CONFIRM -->
   <div id="resetConfirm">
     <div>RESET THE CIRCLE?</div>
     <button id="confirmReset">BURN IT ALL</button>
@@ -239,12 +268,6 @@
   </div>
 
   <script>
-    // ---------- SUPABASE INIT ----------
-    const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpgv.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndHRmaXFld253cHFndWhicGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTY1ODgsImV4cCI6MjA3ODc3MjU4OH0.zVK46pTGH0_Ruu20s35ep8NnsQd2ROenG_EuWezXiWg';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // ---------- LEAFLET ----------
     const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([10, 0], 2);
     L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
@@ -279,32 +302,18 @@
       });
     });
 
-    // ---------- DATA HELPERS ----------
-    async function loadAll() {
-      const { data, error } = await supabase
-        .from('summonings')
-        .select('*')
-        .order('timestamp', { ascending: false });
+    function loadAll() {
+      const summonings = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
+      markers.clearLayers(); recent.innerHTML = '';
 
-      if (error) {
-        console.error('Supabase load error:', error);
-        return;
-      }
-
-      // keep a local copy for fast UI updates
-      localStorage.setItem('ritualnet_summonings', JSON.stringify(data));
-
-      markers.clearLayers();
-      recent.innerHTML = '';
-
-      data.slice(0, 10).reverse().forEach(s => {
+      summonings.slice(-10).reverse().forEach(s => {
         const icon = createIcon(s.avatar || 'ritualnet-logo.png');
         const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
 
         m.bindPopup(`
           <div style="position:relative;text-align:center;">
             <img src="${s.avatar || 'ritualnet-logo.png'}">
-            <b>@${s534.name}</b>
+            <b>@${s.name}</b>
             <i>"${s.pledge}"</i>
           </div>
         `);
@@ -319,18 +328,8 @@
       });
     }
 
-    // initial load
     loadAll();
 
-    // realtime subscription
-    supabase
-      .channel('public:summonings')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'summonings' }, payload => {
-        loadAll();
-      })
-      .subscribe();
-
-    // ---------- UI ----------
     document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
 
     map.on('click', e => {
@@ -359,27 +358,19 @@
       }
     };
 
-    document.querySelector('.join-btn').onclick = async () => {
+    document.querySelector('.join-btn').onclick = () => {
       const avatar = document.getElementById('avatarPreview').src;
       const name = document.getElementById('username').value.trim() || "ritualist";
       const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
       if (!clickedPos) return;
 
-      const newSummon = {
-        name,
-        pledge,
-        avatar,
-        lat: clickedPos.lat,
-        lng: clickedPos.lng,
-        timestamp: Date.now()
-      };
+      const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
+      const all = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
+      all.push(newSummon);
+      localStorage.setItem('ritualnet_summonings', JSON.stringify(all));
+      loadAll();
 
-      const { error } = await supabase.from('summonings').insert(newSummon);
-      if (error) {
-        console.error('Insert error:', error);
-        alert('Failed to join the circle. Check console.');
-        return;
-      }
+      if (window.__firebase) window.__firebase.push(window.__firebase.summoningsRef, newSummon);
 
       closeModal();
       const success = document.getElementById('success');
@@ -390,7 +381,6 @@
       }, 3200);
     };
 
-    // ---------- LOGO EASTER EGG ----------
     document.getElementById('ritualLogo').onclick = () => {
       logoClicks++;
       if (clickTimer) clearTimeout(clickTimer);
@@ -402,17 +392,26 @@
       }
     };
 
-    document.getElementById('confirmReset').onclick = async () => {
-      const { error } = await supabase.from('summonings').delete().neq('id', 0); // delete all
-      if (error) console.error(error);
+    document.getElementById('confirmReset').onclick = () => {
       localStorage.removeItem('ritualnet_summonings');
       loadAll();
+      if (window.__firebase) window.__firebase.remove(window.__firebase.summoningsRef);
       document.getElementById('resetConfirm').style.display = 'none';
     };
 
     document.getElementById('cancelReset').onclick = () => {
       document.getElementById('resetConfirm').style.display = 'none';
     };
+
+    if (window.__firebase) {
+      const { onValue, summoningsRef } = window.__firebase;
+      onValue(summoningsRef, (snap) => {
+        const data = snap.val();
+        const arr = data ? Object.values(data) : [];
+        localStorage.setItem('ritualnet_summonings', JSON.stringify(arr));
+        loadAll();
+      });
+    }
   </script>
 </body>
 </html>

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>RITUALNET</title>
 
-  <!-- Leaflet CSS & JS -->
+  <!-- Leaflet CSS & JS (unchanged) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -44,7 +44,6 @@
       text-shadow:0 0 60px #00ff4188;letter-spacing:12px;cursor:pointer;
       position:relative;
     }
-    /* SAME EXACT PULSE AS LOGO */
     .title-text::before{
       content:'RITUALNET';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
       font-size:56px;letter-spacing:12px;opacity:0.18;
@@ -53,7 +52,6 @@
       animation:ritualPulse 6s infinite ease-in-out;z-index:-1;
     }
 
-    /* ONE LINE ONLY — EXACTLY UNDER TITLE */
     .subtitle{
       position:absolute;top:100px;left:50%;transform:translateX(-50%);
       font-size:16px;letter-spacing:2px;color:#00ff88;
@@ -96,7 +94,6 @@
       font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;cursor:pointer;box-shadow:0 0 60px #00ff41;transition:0.4s;}
     .join-btn:hover{transform:scale(1.1);box-shadow:0 0 100px #00ff41;}
 
-    /* RESTORED ORIGINAL "YOU ARE RITUALIZED" ANIMATION */
     .success{
       position:fixed;top:0;left:0;width:100%;height:100%;background:#000;
       display:none;align-items:center;justify-content:center;flex-direction:column;
@@ -199,9 +196,6 @@
     .leaflet-popup-content b { color: #00ff41 !important; font-size: 18px !important; display: block; margin: 8px 0; }
     .leaflet-popup-content i { font-size: 14px !important; opacity: 0.9; display: block; }
     .leaflet-popup-tip { background: #00ff41 !important; box-shadow: 0 0 20px #00ff41 !important; }
-
-    /* sync badge */
-    #syncStatus{ position:absolute; right:20px; top:120px; z-index:500; background:#001100; color:#00ff88; padding:8px 12px; border-radius:10px; border:2px solid #00ff41; font-family:'Orbitron',sans-serif; font-size:12px; box-shadow:0 0 30px rgba(0,255,65,0.15); }
   </style>
 </head>
 <body>
@@ -246,58 +240,61 @@
 
   <!-- RESET CONFIRM -->
   <div id="resetConfirm">
-    <div style="font-size:28px;margin-bottom:10px;">RESET THE CIRCLE?</div>
-    <div style="display:flex;gap:20px;">
-      <button id="confirmReset">BURN IT ALL</button>
-      <button id="cancelReset">CANCEL</button>
-    </div>
+    <div>RESET THE CIRCLE?</div>
+    <button id="confirmReset">BURN IT ALL</button>
+    <button id="cancelReset">CANCEL</button>
   </div>
-
-  <!-- Sync status -->
-  <div id="syncStatus">Sync: <span id="syncText">local</span></div>
 
   <!-- ---------- Safe Supabase loader (non-blocking) ---------- -->
   <script>
+    /*
+      Minimal, safe Supabase integration:
+      - Replace URL and KEY below
+      - This loader attempts to load the UMD build of supabase.
+      - If it fails or you don't set the key, a harmless shim will be used so the page keeps working.
+    */
     (function(){
-      // Use your project URL here:
-      const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpgv.supabase.co';
-      // Replace with anon key from Supabase dashboard (NOT service_role)
-      const SUPABASE_KEY = '<REPLACE_WITH_ANON_KEY>';
-
+      const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpgv.supabase.co'; // <- replace if different
+      const SUPABASE_KEY = '<REPLACE_WITH_ANON_KEY>'; // <- REPLACE with anon key or user JWT (NOT service_role)
       const UMD_SRC = 'https://unpkg.com/@supabase/supabase-js/dist/umd/supabase.js';
 
+      // default shim (no-op) so page never breaks
       function installShim(){
         window.__supabase = {
           push: async () => { console.info('supabase.push skipped (shim)'); return false; },
           removeAll: async () => { console.info('supabase.removeAll skipped (shim)'); return false; },
-          onValue: (cb) => { console.info('supabase.onValue skipped (shim)'); return () => {}; },
-          status: { connected: false }
+          onValue: (cb) => { console.info('supabase.onValue skipped (shim)'); return () => {}; }
         };
-        const t = document.getElementById('syncText');
-        if (t) t.textContent = 'local';
       }
 
+      // If user didn't replace key, install shim and return
       if (!SUPABASE_URL || !SUPABASE_KEY || SUPABASE_KEY.includes('<REPLACE')) {
-        console.info('Supabase not configured — using shim.');
+        console.info('Supabase not configured (no key) — using shim.');
         installShim();
         return;
       }
 
+      // Dynamically load UMD script
       const s = document.createElement('script');
       s.src = UMD_SRC;
       s.async = true;
       s.onload = () => {
         try {
+          // UMD exposes "supabase" global with createClient function
           const createClient = window.supabase?.createClient || (window.supabasejs && window.supabasejs.createClient);
-          if (!createClient) { console.warn('Supabase UMD loaded but createClient not found — shim'); installShim(); return; }
-
+          if (!createClient) {
+            console.warn('Supabase UMD loaded but createClient not found — using shim.');
+            installShim();
+            return;
+          }
           const client = createClient(SUPABASE_URL, SUPABASE_KEY, { realtime: { params: { eventsPerSecond: 5 } }});
           const TABLE = 'summonings';
 
+          // helper functions similar to previous Firebase surface
           async function push(item){
             try {
               const { error } = await client.from(TABLE).insert([item]);
-              if (error) { console.warn('supabase insert error', error); return false; }
+              if (error){ console.warn('supabase insert error', error); return false; }
               return true;
             } catch (err) { console.warn('supabase push failed', err); return false; }
           }
@@ -305,17 +302,19 @@
           async function removeAll(){
             try {
               const { error } = await client.from(TABLE).delete().neq('id', '');
-              if (error) { console.warn('supabase delete error', error); return false; }
+              if (error){ console.warn('supabase delete error', error); return false; }
               return true;
             } catch (err) { console.warn('supabase removeAll failed', err); return false; }
           }
 
           function onValue(callback){
+            // initial fetch
             client.from(TABLE).select('*').order('timestamp', { ascending: true }).then(({ data, error }) => {
               if (error) console.warn('supabase initial select error', error);
               callback({ val: () => data || [] });
             });
 
+            // subscribe to changes and re-fetch on each event
             const chan = client
               .channel('public:' + TABLE)
               .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, () => {
@@ -330,9 +329,8 @@
             };
           }
 
-          window.__supabase = { supabase: client, push, removeAll, onValue, status: { connected: true } };
-          const t = document.getElementById('syncText');
-          if (t) t.textContent = 'connected';
+          // expose a minimal compat object on window
+          window.__supabase = { supabase: client, push, removeAll, onValue };
           console.info('Supabase loaded and initialized (window.__supabase).');
         } catch (err) {
           console.warn('Supabase loader error', err);
@@ -347,7 +345,7 @@
     })();
   </script>
 
-  <!-- ---------- Main app script (local-first + robust merge) ---------- -->
+  <!-- ---------- Main app script (unchanged behavior + minimal supabase calls) ---------- -->
   <script>
     const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([10, 0], 2);
     L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -439,72 +437,21 @@
       }
     };
 
-    /* Local storage helpers */
-    const STORAGE_KEY = 'ritualnet_summonings_v2';
-    function readLocal() {
-      try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      } catch (e) {
-        console.warn('corrupt local data, resetting');
-        localStorage.removeItem(STORAGE_KEY);
-        return [];
-      }
-    }
-    function writeLocal(arr) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-    }
-
-    /* Merge remote rows into local (dedupe by timestamp) */
-    function mergeRemoteIntoLocal(remoteArray){
-      if (!Array.isArray(remoteArray) || remoteArray.length === 0) return;
-      const local = readLocal();
-      const existTs = new Set(local.map(s => s.timestamp));
-      remoteArray.forEach(r => {
-        if (!existTs.has(r.timestamp)) local.push(r);
-      });
-      local.sort((a,b)=> (a.timestamp||0)-(b.timestamp||0));
-      writeLocal(local);
-      loadAll();
-    }
-
-    /* Attach supabase listener (merges into localStorage) */
-    (function attachSupabaseListener(){
-      const tryAttach = () => {
-        if (window.__supabase && typeof window.__supabase.onValue === 'function') {
-          try {
-            document.getElementById('syncText').textContent = 'connected';
-            window.__supabase.onValue((snap) => {
-              const data = snap && typeof snap.val === 'function' ? snap.val() : snap;
-              const arr = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
-              mergeRemoteIntoLocal(arr);
-            });
-          } catch (e) {
-            console.warn('Error attaching supabase listener', e);
-            document.getElementById('syncText').textContent = 'error';
-          }
-        } else {
-          setTimeout(tryAttach, 400);
-        }
-      };
-      tryAttach();
-    })();
-
-    /* Join ritual — store locally and push to supabase (non-blocking) */
-    document.querySelector('.join-btn').onclick = async () => {
+    document.querySelector('.join-btn').onclick = () => {
       const avatar = document.getElementById('avatarPreview').src;
       const name = document.getElementById('username').value.trim() || "ritualist";
       const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
       if (!clickedPos) return;
 
       const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
-
-      const all = readLocal();
+      const all = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
       all.push(newSummon);
-      writeLocal(all);
+      localStorage.setItem('ritualnet_summonings', JSON.stringify(all));
       loadAll();
 
+      // minimal supabase push (non-blocking)
       if (window.__supabase && typeof window.__supabase.push === 'function') {
-        try { await window.__supabase.push(newSummon); } catch (e) { console.warn('supabase push error', e); }
+        try { window.__supabase.push(newSummon); } catch(e){ console.warn('supabase push error', e); }
       }
 
       closeModal();
@@ -516,7 +463,6 @@
       }, 3200);
     };
 
-    /* Easter reset (local + supabase remove attempt) */
     document.getElementById('ritualLogo').onclick = () => {
       logoClicks++;
       if (clickTimer) clearTimeout(clickTimer);
@@ -528,21 +474,42 @@
       }
     };
 
-    document.getElementById('confirmReset').onclick = async () => {
-      localStorage.removeItem(STORAGE_KEY);
+    document.getElementById('confirmReset').onclick = () => {
+      localStorage.removeItem('ritualnet_summonings');
       loadAll();
-      document.getElementById('resetConfirm').style.display = 'none';
       if (window.__supabase && typeof window.__supabase.removeAll === 'function') {
-        try { await window.__supabase.removeAll(); } catch (e) { console.warn('supabase removeAll failed', e); }
+        try { window.__supabase.removeAll(); } catch(e){ console.warn('supabase removeAll error', e); }
       }
+      document.getElementById('resetConfirm').style.display = 'none';
     };
 
     document.getElementById('cancelReset').onclick = () => {
       document.getElementById('resetConfirm').style.display = 'none';
     };
 
-    // initial UI
-    loadAll();
+    // minimal supabase listener — will write remote rows to localStorage when available
+    (function attachSupabaseListener(){
+      // wait until __supabase exists (it is created by the loader script above)
+      const check = () => {
+        if (window.__supabase && typeof window.__supabase.onValue === 'function') {
+          try {
+            window.__supabase.onValue((snap) => {
+              const data = snap && typeof snap.val === 'function' ? snap.val() : snap;
+              const arr = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+              // write array to localStorage (overwrite local copy) and reload
+              if (arr.length) {
+                localStorage.setItem('ritualnet_summonings', JSON.stringify(arr));
+                loadAll();
+              }
+            });
+          } catch (e) { console.warn('attachSupabaseListener error', e); }
+        } else {
+          // try again shortly (supabase loader may still be loading)
+          setTimeout(check, 500);
+        }
+      };
+      check();
+    })();
   </script>
 </body>
 </html>

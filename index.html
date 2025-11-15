@@ -330,6 +330,26 @@
 
     loadAll();
 
+    // ---- GLOBAL SYNC: POLLING (added only) ----
+    async function syncGlobal() {
+      try {
+        const res = await fetch('/api/load');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!Array.isArray(data)) return;
+        // write exact array from server (server owns canonical order)
+        localStorage.setItem('ritualnet_summonings', JSON.stringify(data));
+        loadAll();
+      } catch (e) {
+        // silent failure — keep local data
+        console.warn('syncGlobal failed', e);
+      }
+    }
+    // initial load + poll every 3s
+    syncGlobal();
+    setInterval(syncGlobal, 3000);
+    // ---- end polling block ----
+
     document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
 
     map.on('click', e => {

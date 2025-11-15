@@ -123,7 +123,6 @@
 
     .ritual-marker img{border-radius:50%;border:4px solid #00ff41;box-shadow:0 0 30px #00ff41;}
 
-    /* RESET CONFIRM PANEL */
     #resetConfirm{
       position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.98);
       backdrop-filter:blur(20px);display:none;align-items:center;justify-content:center;
@@ -223,7 +222,6 @@
       });
     });
 
-    // COMPOSITE AVATAR: faint ritual logo behind
     function compositeAvatar(userAvatarUrl, callback) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -292,15 +290,14 @@
 
     loadAll();
 
-    // RITUALNET → X.COM
     document.getElementById('titleLink').onclick = () => {
       window.open('https://x.com/ritualnet', '_blank');
     };
 
-    // MAP CLICK
+    // FIXED: This was getElementByQ → BROKEN
     map.on('click', e => {
       clickedPos = e.latlng;
-      document.getElementByQ('ritualModal').style.display = 'flex';
+      document.getElementById('ritualModal').style.display = 'flex';  // FIXED
       document.getElementById('avatarPreview').src = 'ritualnet-logo.png';
       document.getElementById('username').value = '';
       document.getElementById('pledge').value = '';
@@ -328,7 +325,6 @@
       }
     };
 
-    // JOIN
     document.querySelector('.join-btn').onclick = () => {
       const avatar = document.getElementById('avatarPreview').src;
       const name = document.getElementById('username').value.trim() || "ritualist";
@@ -355,21 +351,16 @@
       }, 3200);
     };
 
-    // 7-CLICK LOGO → BURN IT ALL (FIXED)
+    // 7-CLICK LOGO → BURN IT ALL
     document.getElementById('ritualLogo').onclick = () => {
       logoClicks++;
-
-      // Clear previous timer
       if (clickTimer) clearTimeout(clickTimer);
 
       if (logoClicks === 7) {
         document.getElementById('resetConfirm').style.display = 'flex';
         logoClicks = 0;
       } else {
-        // Reset counter after 3 seconds of inactivity
-        clickTimer = setTimeout(() => {
-          logoClicks = 0;
-        }, 3000);
+        clickTimer = setTimeout(() => { logoClicks = 0; }, 3000);
       }
     };
 

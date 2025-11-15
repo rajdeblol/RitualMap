@@ -70,7 +70,6 @@
       text-shadow:0 0 60px #00ff4188;letter-spacing:12px;cursor:pointer;
       position:relative;
     }
-    /* EXACT SAME PULSE AS LOGO — NO DOUBLE */
     .title-text::before{
       content:'RITUALNET';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
       font-size:56px;letter-spacing:12px;opacity:0.18;
@@ -92,7 +91,49 @@
       50%{opacity:0.25;transform:translate(-50%,-50%) scale(1.08);}
     }
 
-    .modal{position:fixed;top:0;left:0;width...}
+    /* MODAL — FULLY RESTORED */
+    .modal{
+      position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.98);backdrop-filter:blur(20px);
+      display:none;align-items:center;justify-content:center;z-index:200;
+    }
+    .card{
+      width:430px;background:#000;padding:50px 40px;border:3px solid #00ff41;border-radius:30px;
+      text-align:center;position:relative;box-shadow:0 0 100px rgba(0,255,65,0.7);
+    }
+    .close-btn{
+      position:absolute;top:20px;right:25px;width:40px;height:40px;background:transparent;
+      border:2px solid #00ff41;border-radius:50%;color:#00ff41;font-size:28px;cursor:pointer;
+    }
+    .close-btn:hover{background:#00ff4111;transform:rotate(90deg);}
+    .card h2{
+      font-family:'Orbitron',sans-serif;color:#00ff41;font-size:42px;text-shadow:0 0 30px #00ff41;
+      margin-bottom:40px;letter-spacing:8px;
+    }
+    
+    .avatar-circle{
+      width:140px;height:140px;border-radius:50%;margin:30px auto;
+      border:6px solid #00ff41;overflow:hidden;background:#000;
+      box-shadow:0 0 60px #00ff4188;position:relative;
+    }
+    .avatar-circle img{width:100%;height:100%;object-fit:cover;position:relative;z-index:2;}
+    .avatar-circle::before{
+      content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      width:68%;height:68%;background:url('ritualnet-logo.png') center/contain no-repeat;
+      opacity:0.18;z-index:1;pointer-events:none;animation:ritualPulse 6s infinite ease-in-out;
+    }
+
+    .upload-btn,.input-field,.pledge-field{
+      width:100%;padding:18px;margin:18px 0;background:#001100;
+      border:2px dashed #00ff41;border-radius:20px;color:#00ff88;font-size:18px;text-align:center;cursor:pointer;transition:0.3s;
+    }
+    .upload-btn:hover,.input-field:focus,.pledge-field:focus{background:#002200;border-style:solid;outline:none;}
+    .pledge-field{height:100px;resize:none;text-align:left;padding:20px;}
+    .join-btn{
+      margin-top:30px;padding:20px 80px;background:#00ff41;color:#000;border:none;border-radius:50px;
+      font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;cursor:pointer;
+      box-shadow:0 0 60px #00ff41;transition:0.4s;
+    }
+    .join-btn:hover{transform:scale(1.1);box-shadow:0 0 100px #00ff41;}
 
     .success{
       position:fixed;top:0;left:0;width:100%;height:100%;background:#000;
@@ -101,7 +142,6 @@
     }
     .success.active{ display:flex; }
 
-    /* ORIGINAL "YOU ARE RITUALIZED" ANIMATION — EXACT */
     .success h1{
       font-family:'Orbitron',sans-serif;font-size:64px;text-shadow:0 0 60px #00ff41;
       animation:ritualPulse 2s ease-out;
@@ -212,6 +252,7 @@
     <div id="recent"></div>
   </div>
 
+  <!-- MODAL — FULLY WORKING -->
   <div class="modal" id="ritualModal">
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
@@ -225,7 +266,6 @@
     </div>
   </div>
 
-  <!-- ORIGINAL "YOU ARE RITUALIZED" ANIMATION -->
   <div class="success" id="success">
     <div class="ritual-circle"></div>
     <h1>YOU ARE RITUALIZED</h1>
@@ -277,7 +317,6 @@
       const summonings = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
       markers.clearLayers(); recent.innerHTML = '';
 
-      // ONLY LAST 3
       const lastThree = summonings.slice(-3).reverse();
 
       lastThree.forEach(s => {
@@ -306,9 +345,11 @@
 
     document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
 
+    // MAP CLICK → MODAL OPENS
     map.on('click', e => {
       clickedPos = e.latlng;
-      document.getElementById('ritualModal').style.display = 'flex';
+      const modal = document.getElementById('ritualModal');
+      modal.style.display = 'flex';
       document.getElementById('avatarPreview').src = 'ritualnet-logo.png';
       document.getElementById('username').value = '';
       document.getElementById('pledge').value = '';

@@ -97,15 +97,6 @@
     let logoClicks = 0;
     let clickTimer = null;
 
-    function createIcon(src) {
-      return L.divIcon({
-        className: 'ritual-marker',
-        html: `<img src="${src}" style="width:50px;height:50px;border-radius:50%;border:3px solid #00ff41;">`,
-        iconSize: [50, 50],
-        iconAnchor: [25, 25]
-      });
-    }
-
     function loadAll() {
       const summonings = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
       const deduped = summonings.filter((s, i, a) => a.findIndex(t => t.id === s.id) === i).slice(-3).reverse();
@@ -114,7 +105,12 @@
       recent.innerHTML = '';
 
       deduped.forEach(s => {
-        const icon = createIcon(s.avatar || 'https://i.imgur.com/8Y7K8vP.png');
+        const icon = L.divIcon({
+          className: 'ritual-marker',
+          html: `<img src="${s.avatar || 'https://i.imgur.com/8Y7K8vP.png'}" style="width:50px;height:50px;border-radius:50%;border:3px solid #00ff41;">`,
+          iconSize: [50, 50],
+          iconAnchor: [25, 25]
+        });
         const m = L.marker([s.lat, s.lng], { icon }).addTo(markers);
         m.bindPopup(`<div style="text-align:center;"><img src="${s.avatar || 'https://i.imgur.com/8Y7K8vP.png'}" style="width:70px;height:70px;border-radius:50%;border:3px solid #00ff41;"><br><b>@${s.name}</b><br><i>"${s.pledge}"</i></div>`);
 
@@ -125,20 +121,20 @@
       });
     }
 
-    // GLOBAL SYNC VIA POLLING
-    async function syncWithServer() {
+    // GLOBAL SYNC
+    async function syncGlobal() {
       try {
         const res = await fetch(`${API_BASE}/load`);
         if (res.ok) {
-          const serverData = await res.json();
-          localStorage.setItem('ritualnet_summonings', JSON.stringify(serverData));
+          const data = await res.json();
+          localStorage.setItem('ritualnet_summonings', JSON.stringify(data));
           loadAll();
         }
       } catch (e) {}
     }
 
-    syncWithServer();
-    setInterval(syncWithServer, 3000);
+    syncGlobal();
+    setInterval(syncGlobal, 3000);
 
     map.on('click', e => {
       clickedPos = e.latlng;
@@ -178,7 +174,7 @@
         timestamp: Date.now() 
       };
 
-      // SEND TO SERVER + LOCAL
+      // SEND TO GLOBAL SERVER
       try {
         const res = await fetch(`${API_BASE}/join`, {
           method: 'POST',
@@ -194,6 +190,13 @@
           loadAll();
         }
       } catch (e) {}
+
+      // LOCAL FALLBACK (UNCHANGED)
+      const newSummon = { id: Date.now().toString(), ...payload };
+      const all = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
+      all.push(newSummon);
+      localStorage.setItem('ritualnet_summonings', JSON.stringify(all));
+      loadAll();
 
       closeModal();
       const success = document.getElementById('success');
@@ -225,7 +228,6 @@
       document.getElementById('resetConfirm').style.display = 'none';
     };
 
-    // INITIAL LOAD
     loadAll();
   </script>
 </body>

@@ -1,22 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>RITUALNET</title>
-
-  <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Supabase client (ESM) -->
+  <!-- Supabase client (minimal replacement for Firebase) -->
   <script type="module">
-    // --- SUPABASE CONFIG ---
-    // Replace these values before deploying:
-    export const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpgv.supabase.co'; // <- your project URL
-    export const SUPABASE_KEY = '<REPLACE_WITH_ANON_KEY_OR_USER_JWT>';        // <- anon key or user JWT (not service_role)
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-    // The rest of the supabase initialization is done in the main script below.
+    // ← REPLACE THESE
+    const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpgv.supabase.co'; // your project URL
+    const SUPABASE_KEY = '<REPLACE_WITH_ANON_KEY>'; // put anon key or a short-lived user JWT (NOT service_role)
+
+    // init client (will be null if key not provided)
+    let supabase = null;
+    try {
+      if (SUPABASE_URL && SUPABASE_KEY && SUPABASE_KEY.indexOf('<REPLACE') === -1) {
+        supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { realtime: { params: { eventsPerSecond: 5 } }});
+      } else {
+        console.info('Supabase key not set — running local-only.');
+      }
+    } catch (e) {
+      console.warn('Supabase init failed', e);
+      supabase = null;
+    }
+
+    const TABLE = 'summonings'; // table name in your Supabase DB
+
+    // push a single item (INSERT)
+    async function push(item) {
+      if (!supabase) return false;
+      try {
+        const { error } = await supabase.from(TABLE).insert([item]);
+        if (error) { console.warn('supabase insert error', error); return false; }
+        return true;
+      } catch (err) {
+        console.warn('supabase push error', err);
+        return false;
+      }
+    }
+
+    // remove all rows (DELETE) — will only work if your RLS/policies/keys permit it
+    async function removeAll() {
+      if (!supabase) return false;
+      try {
+        const { error } = await supabase.from(TABLE).delete().neq('id', '');
+        if (error) { console.warn('supabase delete error', error); return false; }
+        return true;
+      } catch (err) {
+        console.warn('supabase removeAll error', err);
+        return false;
+      }
+    }
+
+    // onValue: call callback with a snap-like object { val: () => rowsArray }
+    // and subscribe to realtime table changes (simple approach: re-query on any change)
+    function onValue(callback) {
+      if (!supabase) return () => {};
+      // initial fetch
+      supabase.from(TABLE).select('*').order('timestamp', { ascending: true }).then(({ data, error }) => {
+        callback({ val: () => data || [] });
+      });
+
+      // subscribe to changes and re-fetch
+      const chan = supabase
+        .channel('public:' + TABLE)
+        .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, () => {
+          supabase.from(TABLE).select('*').order('timestamp', { ascending: true }).then(({ data }) => {
+            callback({ val: () => data || [] });
+          });
+        })
+        .subscribe();
+
+      // return unsubscribe function
+      return () => {
+        try { supabase.removeChannel(chan); } catch (e) { /* ignore */ }
+      };
+    }
+
+    // expose small compat object (like previous window.__firebase surface)
+    window.__supabase = { supabase, push, removeAll, onValue };
   </script>
 
   <style>
@@ -32,115 +98,210 @@
       background:linear-gradient(to bottom,rgba(0,30,0,0.98),transparent);
       display:flex;align-items:center;justify-content:center;gap:25px;z-index:100;user-select:none;
     }
-    #ritualLogo{ width:82px;height:82px;cursor:pointer; filter:drop-shadow(0 0 40px #00ff41); animation:glow 5s infinite alternate; transition:0.3s; position:relative;}
+    #ritualLogo{
+      width:82px;height:82px;cursor:pointer;
+      filter:drop-shadow(0 0 40px #00ff41);
+      animation:glow 5s infinite alternate;
+      transition:0.3s;
+      position:relative;
+    }
     #ritualLogo img{width:100%;height:100%;position:absolute;top:0;left:0;z-index:2;}
-    #ritualLogo::before{ content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%); width:68%;height:68%;background:url('ritualnet-logo.png') center/contain no-repeat; opacity:0.18;z-index:-1;pointer-events:none;animation:ritualPulse 6s infinite ease-in-out;}
+    #ritualLogo::before{
+      content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      width:68%;height:68%;background:url('ritualnet-logo.png') center/contain no-repeat;
+      opacity:0.18;z-index:-1;pointer-events:none;animation:ritualPulse 6s infinite ease-in-out;
+    }
     #ritualLogo:hover{transform:scale(1.25);}
 
-    .title-text{ font-family:'Orbitron',sans-serif;font-size:56px;font-weight:900; background:linear-gradient(90deg,#00ff41,#00ff99); -webkit-background-clip:text; -webkit-text-fill-color:transparent; text-shadow:0 0 60px #00ff4188; letter-spacing:12px; cursor:pointer; position:relative;}
-    .title-text::before{ content:'RITUALNET';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%); font-size:56px;letter-spacing:12px;opacity:0.18; background:linear-gradient(90deg,#00ff41,#00ff99); -webkit-background-clip:text; -webkit-text-fill-color:transparent; animation:ritualPulse 6s infinite ease-in-out; z-index:-1; }
+    .title-text{
+      font-family:'Orbitron',sans-serif;font-size:56px;font-weight:900;
+      background:linear-gradient(90deg,#00ff41,#00ff99);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      text-shadow:0 0 60px #00ff4188;letter-spacing:12px;cursor:pointer;
+      position:relative;
+    }
+    /* SAME EXACT PULSE AS LOGO */
+    .title-text::before{
+      content:'RITUALNET';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      font-size:56px;letter-spacing:12px;opacity:0.18;
+      background:linear-gradient(90deg,#00ff41,#00ff99);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      animation:ritualPulse 6s infinite ease-in-out;z-index:-1;
+    }
 
-    .subtitle{ position:absolute;top:100px;left:50%;transform:translateX(-50%); font-size:16px;letter-spacing:2px;color:#00ff88; text-shadow:0 0 20px #00ff41;font-family:'Orbitron',sans-serif; white-space:nowrap; z-index:100; }
+    /* ONE LINE ONLY — EXACTLY UNDER TITLE */
+    .subtitle{
+      position:absolute;top:100px;left:50%;transform:translateX(-50%);
+      font-size:16px;letter-spacing:2px;color:#00ff88;
+      text-shadow:0 0 20px #00ff41;font-family:'Orbitron',sans-serif;
+      white-space:nowrap;z-index:100;
+    }
 
     @keyframes glow{0%{filter:drop-shadow(0 0 30px #00ff41);}100%{filter:drop-shadow(0 0 70px #00ff41);}}
-    @keyframes ritualPulse{0%,100%{opacity:0.15;transform:translate(-50%,-50%) scale(1);}50%{opacity:0.25;transform:translate(-50%,-50%) scale(1.08);}}
+    @keyframes ritualPulse{
+      0%,100%{opacity:0.15;transform:translate(-50%,-50%) scale(1);}
+      50%{opacity:0.25;transform:translate(-50%,-50%) scale(1.08);}
+    }
 
-    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.98);backdrop-filter:blur(20px);display:none;align-items:center;justify-content:center;z-index:200;}
-    .card{width:430px;background:#000;padding:50px 40px;border:3px solid #00ff41;border-radius:30px;text-align:center;position:relative;box-shadow:0 0 100px rgba(0,255,65,0.7);}
-    .close-btn{position:absolute;top:20px;right:25px;width:40px;height:40px;background:transparent;border:2px solid #00ff41;border-radius:50%;color:#00ff41;font-size:28px;cursor:pointer;}
+    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.98);backdrop-filter:blur(20px);
+      display:none;align-items:center;justify-content:center;z-index:200;}
+    .card{width:430px;background:#000;padding:50px 40px;border:3px solid #00ff41;border-radius:30px;
+      text-align:center;position:relative;box-shadow:0 0 100px rgba(0,255,65,0.7);}
+    .close-btn{position:absolute;top:20px;right:25px;width:40px;height:40px;background:transparent;
+      border:2px solid #00ff41;border-radius:50%;color:#00ff41;font-size:28px;cursor:pointer;}
     .close-btn:hover{background:#00ff4111;transform:rotate(90deg);}
     .card h2{font-family:'Orbitron',sans-serif;color:#00ff41;font-size:42px;text-shadow:0 0 30px #00ff41;margin-bottom:40px;letter-spacing:8px;}
-
-    .avatar-circle{ width:140px;height:140px;border-radius:50%;margin:30px auto;border:6px solid #00ff41;overflow:hidden;background:#000; box-shadow:0 0 60px #00ff4188;position:relative;}
+    
+    .avatar-circle{
+      width:140px;height:140px;border-radius:50%;margin:30px auto;
+      border:6px solid #00ff41;overflow:hidden;background:#000;
+      box-shadow:0 0 60px #00ff4188;position:relative;
+    }
     .avatar-circle img{width:100%;height:100%;object-fit:cover;position:relative;z-index:2;}
-    .avatar-circle::before{ content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%); width:68%;height:68%;background:url('ritualnet-logo.png') center/contain no-repeat; opacity:0.18;z-index:1;pointer-events:none;animation:ritualPulse 6s infinite ease-in-out;}
+    .avatar-circle::before{
+      content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      width:68%;height:68%;background:url('ritualnet-logo.png') center/contain no-repeat;
+      opacity:0.18;z-index:1;pointer-events:none;animation:ritualPulse 6s infinite ease-in-out;
+    }
 
-    .upload-btn,.input-field,.pledge-field{width:100%;padding:18px;margin:18px 0;background:#001100;border:2px dashed #00ff41;border-radius:20px;color:#00ff88;font-size:18px;text-align:center;cursor:pointer;transition:0.3s;}
+    .upload-btn,.input-field,.pledge-field{width:100%;padding:18px;margin:18px 0;background:#001100;
+      border:2px dashed #00ff41;border-radius:20px;color:#00ff88;font-size:18px;text-align:center;cursor:pointer;transition:0.3s;}
     .upload-btn:hover,.input-field:focus,.pledge-field:focus{background:#002200;border-style:solid;outline:none;}
     .pledge-field{height:100px;resize:none;text-align:left;padding:20px;}
-    .join-btn{margin-top:30px;padding:20px 80px;background:#00ff41;color:#000;border:none;border-radius:50px;font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;cursor:pointer;box-shadow:0 0 60px #00ff41;transition:0.4s;}
+    .join-btn{margin-top:30px;padding:20px 80px;background:#00ff41;color:#000;border:none;border-radius:50px;
+      font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;cursor:pointer;box-shadow:0 0 60px #00ff41;transition:0.4s;}
     .join-btn:hover{transform:scale(1.1);box-shadow:0 0 100px #00ff41;}
 
-    .success{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:300;color:#00ff41;text-align:center;opacity:0;transition:opacity 0.6s ease;}
+    /* RESTORED ORIGINAL "YOU ARE RITUALIZED" ANIMATION */
+    .success{
+      position:fixed;top:0;left:0;width:100%;height:100%;background:#000;
+      display:none;align-items:center;justify-content:center;flex-direction:column;
+      z-index:300;color:#00ff41;text-align:center;opacity:0;
+      transition:opacity 0.6s ease;
+    }
     .success.active{ display:flex; opacity:1; }
-    .success h1{font-family:'Orbitron',sans-serif;font-size:64px;text-shadow:0 0 60px #00ff41;animation:ritualPulse 2s ease-out;z-index:2;}
-    .success p{margin-top:20px;font-size:20px;opacity:0;animation:fadeIn 1s ease 0.5s forwards;}
-    .ritual-circle{position:absolute;width:300px;height:300px;border:3px solid #00ff41;border-radius:50%;box-shadow:0 0 80px #00ff41, inset 0 0 60px #00ff41;animation:expandGlow 2.5s ease-out forwards;opacity:0;z-index:1;}
-    @keyframes expandGlow{0%{width:0;height:0;opacity:1;}70%{width:400px;height:400px;opacity:0.6;}100%{width:500px;height:500px;opacity:0;}}
+
+    .success h1{
+      font-family:'Orbitron',sans-serif;font-size:64px;text-shadow:0 0 60px #00ff41;
+      animation:ritualPulse 2s ease-out;z-index:2;
+    }
+    .success p{
+      margin-top:20px;font-size:20px;opacity:0;
+      animation:fadeIn 1s ease 0.5s forwards;
+    }
+    .ritual-circle{
+      position:absolute;width:300px;height:300px;border:3px solid #00ff41;
+      border-radius:50%;box-shadow:0 0 80px #00ff41, inset 0 0 60px #00ff41;
+      animation:expandGlow 2.5s ease-out forwards;opacity:0;z-index:1;
+    }
+    @keyframes expandGlow{
+      0%{width:0;height:0;opacity:1;}
+      70%{width:400px;height:400px;opacity:0.6;}
+      100%{width:500px;height:500px;opacity:0;}
+    }
     @keyframes fadeIn{to{opacity:0.8;}}
 
     /* PANEL */
-    .panel{position:absolute;left:20px;bottom:20px;width:380px;max-height:calc(100vh - 180px); background:#000;border:3px solid #00ff41;border-radius:25px;padding:20px;box-shadow:0 0 80px rgba(0,255,65,0.6);z-index:10;overflow-y:auto;display:flex;flex-direction:column;}
-    .panel h3{font-family:'Orbitron',sans-serif;color:#00ff41;font-size:28px;text-shadow:0 0 25px #00ff41;margin-bottom:15px;text-align:center;background:#001100;padding:12px;border-radius:20px;box-shadow:0 0 40px #00ff41 inset;}
-    .entry{display:flex;align-items:center;margin:12px 0;padding:14px;background:rgba(0,255,65,0.08);border:2px solid #00ff41;border-radius:20px;position:relative;flex-shrink:0;}
-    .entry img{width:48px;height:48px;border-radius:50%;border:3px solid #00ff41;margin-right:15px;box-shadow:0 0 30px #00ff4188;position:relative;z-index:2;}
-    .entry::before{content:'';position:absolute;top:50%;left:24px;transform:translate(-50%,-50%);width:36px;height:36px;background:url('ritualnet-logo.png') center/contain no-repeat;opacity:0.18;z-index:1;pointer-events:none;animation:ritualPulse 5s infinite ease-in-out;}
+    .panel{
+      position:absolute;left:20px;bottom:20px;width:380px;max-height:calc(100vh - 180px);
+      background:#000;border:3px solid #00ff41;border-radius:25px;
+      padding:20px;box-shadow:0 0 80px rgba(0,255,65,0.6);z-index:10;
+      overflow-y:auto;display:flex;flex-direction:column;
+    }
+    .panel h3{
+      font-family:'Orbitron',sans-serif;color:#00ff41;font-size:28px;
+      text-shadow:0 0 25px #00ff41;margin-bottom:15px;text-align:center;
+      background:#001100;padding:12px;border-radius:20px;
+      box-shadow:0 0 40px #00ff41 inset;
+    }
+    .entry{
+      display:flex;align-items:center;margin:12px 0;padding:14px;
+      background:rgba(0,255,65,0.08);border:2px solid #00ff41;
+      border-radius:20px;position:relative;flex-shrink:0;
+    }
+    .entry img{
+      width:48px;height:48px;border-radius:50%;border:3px solid #00ff41;
+      margin-right:15px;box-shadow:0 0 30px #00ff4188;position:relative;z-index:2;
+    }
+    .entry::before{
+      content:'';position:absolute;top:50%;left:24px;transform:translate(-50%,-50%);
+      width:36px;height:36px;background:url('ritualnet-logo.png') center/contain no-repeat;
+      opacity:0.18;z-index:1;pointer-events:none;animation:ritualPulse 5s infinite ease-in-out;
+    }
     .entry .name{color:#00ff88;font-weight:bold;font-family:'Orbitron',sans-serif;font-size:17px;text-align:center;flex:1;}
     .entry .pledge{color:#00ff88;font-size:14px;margin-top:4px;text-align:center;flex:1;}
 
-    .ritual-marker img{border-radius:50%;border:4px solid #00ff41;box-shadow:0 0 30px #00ff41;position:relative;z-index:2;}
-    .ritual-marker::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60%;height:60%;background:url('ritualnet-logo.png') center/contain no-repeat;opacity:0.18;z-index:1;pointer-events:none;animation:ritualPulse 7s infinite ease-in-out;}
+    .ritual-marker img{
+      border-radius:50%;border:4px solid #00ff41;box-shadow:0 0 30px #00ff41;position:relative;z-index:2;
+    }
+    .ritual-marker::after{
+      content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      width:60%;height:60%;background:url('ritualnet-logo.png') center/contain no-repeat;
+      opacity:0.18;z-index:1;pointer-events:none;animation:ritualPulse 7s infinite ease-in-out;
+    }
 
-    #resetConfirm{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.98);backdrop-filter:blur(20px);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:400;color:#00ff41;text-align:center;font-family:'Orbitron',sans-serif;}
-    #resetConfirm button{margin:20px;font-size:28px;padding:18px 60px;border-radius:50px;font-family:'Orbitron',sans-serif;font-weight:900;cursor:pointer;}
+    #resetConfirm{
+      position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.98);
+      backdrop-filter:blur(20px);display:none;align-items:center;justify-content:center;
+      flex-direction:column;z-index:400;color:#00ff41;text-align:center;font-family:'Orbitron',sans-serif;
+    }
+    #resetConfirm button{
+      margin:20px;font-size:28px;padding:18px 60px;border-radius:50px;
+      font-family:'Orbitron',sans-serif;font-weight:900;cursor:pointer;
+    }
     #confirmReset{background:#00ff41;color:#000;box-shadow:0 0 60px #00ff41;}
     #cancelReset{background:#333;color:#00ff41;border:2px solid #00ff41;}
 
     /* POPUP */
-    .leaflet-popup-content-wrapper { background: #000 !important; color: #0f0 !important; border: 3px solid #00ff41 !important; border-radius: 20px !important; padding: 0 !important; box-shadow: 0 0 40px rgba(0,255,65,0.6) !important; }
-    .leaflet-popup-content { margin: 0 !important; padding: 16px !important; text-align: center !important; font-family: 'Orbitron', sans-serif !important; position: relative; }
-    .leaflet-popup-content img { width: 80px !important; height: 80px !important; border-radius: 50% !important; border: 4px solid #00ff41 !important; margin-bottom: 12px !important; box-shadow: 0 0 20px #00ff41 !important; position: relative; z-index: 2; }
-    .leaflet-popup-content::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 48px; height: 48px; background: url('ritualnet-logo.png') center/contain no-repeat; opacity: 0.18; z-index: 1; pointer-events: none; animation: ritualPulse 6s infinite ease-in-out; }
+    .leaflet-popup-content-wrapper {
+      background: #000 !important; color: #0f0 !important;
+      border: 3px solid #00ff41 !important; border-radius: 20px !important;
+      padding: 0 !important; box-shadow: 0 0 40px rgba(0,255,65,0.6) !important;
+    }
+    .leaflet-popup-content {
+      margin: 0 !important; padding: 16px !important; text-align: center !important;
+      font-family: 'Orbitron', sans-serif !important; position: relative;
+    }
+    .leaflet-popup-content img {
+      width: 80px !important; height: 80px !important; border-radius: 50% !important;
+      border: 4px solid #00ff41 !important; margin-bottom: 12px !important;
+      box-shadow: 0 0 20px #00ff41 !important; position: relative; z-index: 2;
+    }
+    .leaflet-popup-content::before {
+      content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 48px; height: 48px; background: url('ritualnet-logo.png') center/contain no-repeat;
+      opacity: 0.18; z-index: 1; pointer-events: none; animation: ritualPulse 6s infinite ease-in-out;
+    }
     .leaflet-popup-content b { color: #00ff41 !important; font-size: 18px !important; display: block; margin: 8px 0; }
     .leaflet-popup-content i { font-size: 14px !important; opacity: 0.9; display: block; }
     .leaflet-popup-tip { background: #00ff41 !important; box-shadow: 0 0 20px #00ff41 !important; }
-
-    /* tiny controls row */
-    .controls-row{display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap;}
-    .tiny-btn{background:#001100;color:#00ff88;border:2px solid #00ff41;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:13px;}
-    .tiny-input{background:#001100;color:#00ff88;border:2px solid #00ff41;padding:8px;border-radius:10px;font-size:13px;width:170px;}
   </style>
 </head>
 <body>
+
   <div id="map"></div>
 
+  <!-- TITLE BAR -->
   <div class="title-bar">
-    <div id="ritualLogo"><img src="ritualnet-logo.png" alt="ritual"></div>
+    <div id="ritualLogo"><img src="ritualnet-logo.png"></div>
     <div class="title-text" id="titleLink">RITUALNET</div>
   </div>
 
+  <!-- ONE LINE ONLY -->
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
+  <!-- PANEL -->
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent"></div>
-
-    <div style="margin-top:10px;">
-      <div class="controls-row">
-        <button class="tiny-btn" id="exportBtn" title="Export all summonings to JSON">Export</button>
-        <label class="tiny-btn" for="importFile" style="cursor:pointer">Import</label>
-        <input type="file" id="importFile" accept="application/json" style="display:none;">
-        <button class="tiny-btn" id="clearBtn" title="Clear stored summonings">Clear</button>
-      </div>
-
-      <div style="margin-top:10px;">
-        <input class="tiny-input" id="syncUrl" placeholder="Optional sync endpoint (https://...)" />
-        <button class="tiny-btn" id="enableSync">Enable Sync</button>
-        <button class="tiny-btn" id="disableSync" style="display:none;background:#440000;color:#00ff88;border:2px solid #00ff41;">Disable Sync</button>
-      </div>
-
-      <div style="margin-top:8px;font-size:12px;color:#00ff88;opacity:0.8;">
-        Tip: Export JSON and paste to another user to share summonings. For shared realtime, use Supabase (anon key) + RLS/policies.
-      </div>
-    </div>
   </div>
 
-  <!-- modal -->
+  <!-- MODAL -->
   <div class="modal" id="ritualModal">
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
       <h2>PERFORM THE RITUAL</h2>
-      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview" alt="avatar"></div>
+      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview"></div>
       <label class="upload-btn">UPLOAD AVATAR</label>
       <input type="file" id="avatarInput" accept="image/*" style="display:none;">
       <input type="text" class="input-field" id="username" placeholder="X / Twitter username">
@@ -149,39 +310,24 @@
     </div>
   </div>
 
+  <!-- SUCCESS — ORIGINAL ANIMATION RESTORED -->
   <div class="success" id="success">
     <div class="ritual-circle"></div>
     <h1>YOU ARE RITUALIZED</h1>
     <p>The circle grows stronger.</p>
   </div>
 
+  <!-- RESET CONFIRM -->
   <div id="resetConfirm">
-    <div style="font-size:28px;margin-bottom:10px;">RESET THE CIRCLE?</div>
-    <div style="display:flex;gap:20px;">
-      <button id="confirmReset">BURN IT ALL</button>
-      <button id="cancelReset">CANCEL</button>
-    </div>
+    <div>RESET THE CIRCLE?</div>
+    <button id="confirmReset">BURN IT ALL</button>
+    <button id="cancelReset">CANCEL</button>
   </div>
 
-  <!-- Main script: local-first app + Supabase integration -->
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    import { SUPABASE_URL, SUPABASE_KEY } from './'; // uses the exported constants in the head script
-
-    // --- Supabase client (client-safe: anon key or user JWT) ---
-    const TABLE = 'summonings';
-    let supabase = null;
-    if (SUPABASE_URL && SUPABASE_KEY && SUPABASE_KEY !== '<REPLACE_WITH_ANON_KEY_OR_USER_JWT>') {
-      supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { realtime: { params: { eventsPerSecond: 10 } }});
-    } else {
-      // supabase stays null until user pastes a key or you edit the file.
-      // This is safe: app runs fully local without any network.
-      console.info('Supabase not configured. Running local-only.');
-    }
-
-    /* ====== Map UI setup (unchanged design) ====== */
+  <script>
     const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([10, 0], 2);
     L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
     const markers = L.layerGroup().addTo(map);
     const recent = document.getElementById('recent');
     let clickedPos = null;
@@ -192,320 +338,4 @@
       const z = map.getZoom();
       if (z <= 3) return 30;
       if (z <= 5) return 40;
-      if (z <= 7) return 50;
-      return 65;
-    }
-
-    function createIcon(src) {
-      const s = getSize();
-      return L.divIcon({
-        className: 'ritual-marker',
-        html: `<img src="${src}" style="width:${s}px;height:${s}px;border-radius:50%;">`,
-        iconSize: [s, s],
-        iconAnchor: [s/2, s/2]
-      });
-    }
-
-    map.on('zoomend', () => {
-      markers.eachLayer(m => {
-        const data = m.options.data;
-        if (data?.avatar) m.setIcon(createIcon(data.avatar));
-      });
-    });
-
-    /* ====== Local storage helpers ====== */
-    const STORAGE_KEY = 'ritualnet_summonings_v2';
-    function readLocal() {
-      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
-      catch (e) { localStorage.removeItem(STORAGE_KEY); return []; }
-    }
-    function writeLocal(arr) { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
-
-    /* ====== Render list & map ====== */
-    function loadAll() {
-      const summonings = readLocal();
-      markers.clearLayers(); recent.innerHTML = '';
-
-      summonings.slice(-50).reverse().forEach(s => {
-        const icon = createIcon(s.avatar || 'ritualnet-logo.png');
-        const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
-        m.bindPopup(`
-          <div style="position:relative;text-align:center;">
-            <img src="${s.avatar || 'ritualnet-logo.png'}">
-            <b>@${s.name}</b>
-            <i>"${s.pledge}"</i>
-          </div>
-        `);
-
-        const entry = document.createElement('div');
-        entry.className = 'entry';
-        entry.innerHTML = `
-          <img src="${s.avatar || 'ritualnet-logo.png'}" alt="avatar">
-          <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
-        `;
-        recent.appendChild(entry);
-      });
-    }
-
-    loadAll();
-
-    document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
-
-    map.on('click', e => {
-      clickedPos = e.latlng;
-      document.getElementById('ritualModal').style.display = 'flex';
-      document.getElementById('avatarPreview').src = 'ritualnet-logo.png';
-      document.getElementById('username').value = '';
-      document.getElementById('pledge').value = '';
-    });
-
-    const closeModal = () => { document.getElementById('ritualModal').style.display = 'none'; clickedPos = null; };
-    document.getElementById('closeBtn').onclick = closeModal;
-    document.querySelector('.modal').onclick = e => { if (e.target.classList.contains('modal')) closeModal(); };
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
-    document.querySelector('.upload-btn').onclick = () => document.getElementById('avatarInput').click();
-    document.getElementById('avatarInput').onchange = e => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = ev => document.getElementById('avatarPreview').src = ev.target.result;
-        reader.readAsDataURL(file);
-      }
-    };
-
-    /* ====== Supabase compatibility helpers ====== */
-    // Provides push(item), onValue(callback), removeAll()
-    const SupabaseHelper = (() => {
-      // If supabase client is not configured, return no-op functions
-      if (!supabase) {
-        return {
-          push: async (item) => { console.info('No supabase configured — push skipped'); return false; },
-          onValue: (cb) => { /* no remote updates */ return () => {}; },
-          removeAll: async () => { console.info('No supabase configured — removeAll skipped'); return false; },
-          fetchAll: async () => []
-        };
-      }
-
-      // fetch all rows ordered by timestamp asc
-      async function fetchAll() {
-        const { data, error } = await supabase.from(TABLE).select('*').order('timestamp', { ascending: true });
-        if (error) { console.warn('supabase fetch error', error); return []; }
-        return data || [];
-      }
-
-      // insert one row
-      async function push(item) {
-        try {
-          const { error } = await supabase.from(TABLE).insert([item]);
-          if (error) { console.warn('supabase insert error', error); return false; }
-          return true;
-        } catch (err) {
-          console.warn('supabase push failed', err);
-          return false;
-        }
-      }
-
-      // delete all rows (dangerous) — will only succeed if policy/key allows
-      async function removeAll() {
-        try {
-          const { error } = await supabase.from(TABLE).delete().neq('id', '');
-          if (error) { console.warn('supabase delete error', error); return false; }
-          return true;
-        } catch (err) {
-          console.warn('supabase removeAll failed', err);
-          return false;
-        }
-      }
-
-      // subscribe to changes and call callback with the full latest array (simple)
-      function onValue(callback) {
-        // initial fetch
-        fetchAll().then(rows => callback(rows));
-
-        // subscribe to Postgres changes for the table
-        const chan = supabase
-          .channel('public:' + TABLE)
-          .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, payload => {
-            // simple approach: fetch all on any change
-            fetchAll().then(rows => callback(rows));
-          })
-          .subscribe();
-
-        // return unsubscribe
-        return () => supabase.removeChannel(chan);
-      }
-
-      return { push, onValue, removeAll, fetchAll };
-    })();
-
-    // expose for debugging if needed
-    window.__supabase = SupabaseHelper;
-
-    /* ====== Sync helpers (optional manual endpoint as fallback) ====== */
-    let syncUrl = '';
-    let syncInterval = null;
-    const SYNC_POLL_MS = 5000;
-
-    async function fetchAndMergeFromEndpoint() {
-      if (!syncUrl) return;
-      try {
-        const resp = await fetch(syncUrl, { method: 'GET' });
-        if (!resp.ok) return;
-        const remote = await resp.json();
-        if (!Array.isArray(remote)) return;
-        const local = readLocal();
-        const exist = new Set(local.map(s => s.timestamp));
-        remote.forEach(item => { if (!exist.has(item.timestamp)) local.push(item); });
-        local.sort((a,b)=> (a.timestamp||0)-(b.timestamp||0));
-        writeLocal(local); loadAll();
-      } catch (err) {
-        console.warn('endpoint sync failed', err);
-      }
-    }
-
-    function startEndpointSync(url) {
-      stopEndpointSync();
-      syncUrl = url;
-      fetchAndMergeFromEndpoint();
-      syncInterval = setInterval(fetchAndMergeFromEndpoint, SYNC_POLL_MS);
-      document.getElementById('enableSync').style.display = 'none';
-      document.getElementById('disableSync').style.display = 'inline-block';
-    }
-    function stopEndpointSync() {
-      if (syncInterval) clearInterval(syncInterval);
-      syncInterval = null; syncUrl = '';
-      document.getElementById('enableSync').style.display = 'inline-block';
-      document.getElementById('disableSync').style.display = 'none';
-    }
-    async function postToEndpoint(summon) {
-      if (!syncUrl) return;
-      try {
-        await fetch(syncUrl, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(summon) });
-      } catch (err) { console.warn('post to endpoint failed', err); }
-    }
-
-    /* ====== Main join logic (local + optional supabase/endpoint push) ====== */
-    document.querySelector('.join-btn').onclick = async () => {
-      const avatar = document.getElementById('avatarPreview').src;
-      const name = (document.getElementById('username').value.trim() || "ritualist").replace(/^@/,'');
-      const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
-      if (!clickedPos) return;
-
-      const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
-      const all = readLocal(); all.push(newSummon); writeLocal(all); loadAll();
-
-      // push to Supabase if configured
-      if (supabase) {
-        SupabaseHelper.push(newSummon).catch(()=>{});
-      }
-
-      // post to optional endpoint if set
-      if (syncUrl) postToEndpoint(newSummon);
-
-      closeModal();
-      const success = document.getElementById('success');
-      success.classList.add('active');
-      setTimeout(()=>{ success.classList.remove('active'); map.flyTo(clickedPos, 10, { duration: 1.8 }); }, 3200);
-    };
-
-    /* ====== Supabase realtime => merge into local storage ====== */
-    if (supabase) {
-      SupabaseHelper.onValue((rows) => {
-        // rows is array from supabase SELECT (ascending)
-        if (!Array.isArray(rows)) return;
-        // dedupe by timestamp
-        const local = readLocal();
-        const exist = new Set(local.map(s=>s.timestamp));
-        rows.forEach(r => { if (!exist.has(r.timestamp)) local.push(r); });
-        // sort and save
-        local.sort((a,b)=> (a.timestamp||0)-(b.timestamp||0));
-        writeLocal(local);
-        loadAll();
-      });
-    }
-
-    /* ====== Endpoint sync UI ====== */
-    document.getElementById('enableSync').onclick = () => {
-      const url = document.getElementById('syncUrl').value.trim();
-      if (!url) return alert('Paste your sync endpoint URL into the field first.');
-      startEndpointSync(url);
-      alert('Sync enabled. Polling every ' + (SYNC_POLL_MS/1000) + 's. Make sure your endpoint supports CORS.');
-    };
-    document.getElementById('disableSync').onclick = () => { stopEndpointSync(); alert('Sync disabled.'); };
-
-    /* ====== Easter reset behavior ====== */
-    document.getElementById('ritualLogo').onclick = () => {
-      logoClicks++;
-      if (clickTimer) clearTimeout(clickTimer);
-      if (logoClicks === 7) {
-        document.getElementById('resetConfirm').style.display = 'flex';
-        logoClicks = 0;
-      } else {
-        clickTimer = setTimeout(()=>{ logoClicks = 0; }, 3000);
-      }
-    };
-
-    document.getElementById('confirmReset').onclick = async () => {
-      // remove local
-      localStorage.removeItem(STORAGE_KEY);
-      loadAll();
-      document.getElementById('resetConfirm').style.display = 'none';
-
-      // attempt server-side removals (only if configured and permitted)
-      if (supabase) {
-        const ok = await SupabaseHelper.removeAll();
-        if (!ok) console.warn('Supabase removeAll failed or not permitted.');
-      }
-      // optional endpoint: call DELETE? (left for your server to accept)
-      if (syncUrl) {
-        try { await fetch(syncUrl, { method: 'DELETE' }); } catch (e) { /* ignore */ }
-      }
-    };
-
-    document.getElementById('cancelReset').onclick = () => document.getElementById('resetConfirm').style.display = 'none';
-
-    /* ====== Export / Import / Clear ====== */
-    document.getElementById('exportBtn').onclick = () => {
-      const data = readLocal();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'ritualnet-summonings.json'; a.click();
-      URL.revokeObjectURL(url);
-    };
-
-    document.getElementById('importFile').onchange = async (e) => {
-      const f = e.target.files[0]; if (!f) return;
-      try {
-        const text = await f.text();
-        const imported = JSON.parse(text);
-        if (!Array.isArray(imported)) throw new Error('invalid file');
-        const local = readLocal();
-        const exist = new Set(local.map(s=>s.timestamp));
-        imported.forEach(item => { if (!exist.has(item.timestamp)) local.push(item); });
-        local.sort((a,b)=> (a.timestamp||0)-(b.timestamp||0));
-        writeLocal(local); loadAll(); alert('Import complete');
-      } catch (err) { alert('Failed to import: ' + err.message); } finally { e.target.value = ''; }
-    };
-
-    document.getElementById('clearBtn').onclick = () => {
-      if (!confirm('Clear all summonings from this browser?')) return;
-      localStorage.removeItem(STORAGE_KEY); loadAll();
-    };
-
-    // finally, run initial local load
-    loadAll();
-
-    /* ====== Small dev note for Vercel deployment ======
-       - When deploying to Vercel, you can keep the anon key in the client if it's truly anon.
-       - Better: host a tiny server (serverless function) that proxies secure operations (delete/reset) using a service_role key stored as a Vercel environment variable.
-       - If you want, I can create a minimal Node/Express server or a Vercel Serverless function that safely exposes:
-           POST /summonings  (inserts)
-           GET  /summonings  (returns all)
-           DELETE /summonings (admin-only - guarded by secret)
-       Ask and I'll drop that into your repo as separate files.
-    */
-  </script>
-</body>
-</html>
+      if (

@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>RITUALNET</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-sA+zWATbFveLLNqHNCLHC33wB8a5rD5nz5+5Z+5Z5Z5Z=" crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o9N1jA3/OVfZGq9M7q3x6+5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z=" crossorigin=""></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -88,7 +88,6 @@
   </div>
 
   <script>
-    // FORCE MAP TO INITIALIZE AFTER LOAD
     window.addEventListener('load', () => {
       const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([10, 0], 2);
       L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png').addTo(map);

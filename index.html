@@ -78,7 +78,7 @@
       white-space:nowrap;z-index:100;
     }
 
-    @keyframes glow{0%{filter:drop-shadow(0 0 30px #00ff41);}100%{filter:drop-shadow(0 0 70px #00ff41);}}
+    @keyframes glow{0%{filter:drop-shadow(0  SCL 0 30px #00ff41);}100%{filter:drop-shadow(0 0 70px #00ff41);}}
     @keyframes ritualPulse{
       0%,100%{opacity:0.15;transform:translate(-50%,-50%) scale(1);}
       50%{opacity:0.25;transform:translate(-50%,-50%) scale(1.08);}
@@ -113,16 +113,14 @@
       font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;cursor:pointer;box-shadow:0 0 60px #00ff41;transition:0.4s;}
     .join-btn:hover{transform:scale(1.1);box-shadow:0 0 100px #00ff41;}
 
-    /* SUCCESS — NOW WITH FULL GLOWING CIRCLE + CENTERED */
+    /* SUCCESS — CENTERED + GLOWING CIRCLE */
     .success{
       position:fixed;top:0;left:0;width:100%;height:100%;background:#000;
       display:flex;align-items:center;justify-content:center;flex-direction:column;
       z-index:300;color:#00ff41;text-align:center;
       opacity:0;visibility:hidden;transition:opacity 0.6s ease;pointer-events:none;
     }
-    .success.active{ 
-      opacity:1; visibility:visible; pointer-events:all; 
-    }
+    .success.active{ opacity:1; visibility:visible; pointer-events:all; }
 
     .success h1{
       font-family:'Orbitron',sans-serif;font-size:64px;text-shadow:0 0 60px #00ff41;
@@ -132,25 +130,19 @@
       margin-top:20px;font-size:20px;opacity:0;
       animation:fadeIn 1s ease 0.5s forwards;
     }
-
-    /* EXPANDING GREEN CIRCLE ANIMATION */
     .ritual-circle{
       position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-      width:0;height:0;
-      border:4px solid #00ff41;
-      border-radius:50%;
-      box-shadow:0 0 80px #00ff41, 0 0 120px #00ff41, inset 0 0 60px #00ff41;
-      animation:expandGlow 2.5s ease-out forwards;
-      opacity:0;z-index:1;
+      width:0;height:0;border:4px solid #00ff41;
+      border-radius:50%;box-shadow:0 0 80px #00ff41, 0 0 120px #00ff41, inset 0 0 60px #00ff41;
+      animation:expandGlow 2.5s ease-out forwards;opacity:0;z-index:1;
     }
     @keyframes expandGlow{
-      0%  {width:0;height:0;opacity:1;transform:translate(-50%,-50%) scale(0);}
-      60% {width:380px;height:380px;opacity:0.8;transform:translate(-50%,-50%) scale(1);}
-      100%{width:500px;height:500px;opacity:0;transform:translate(-50%,-50%) scale(1.2);}
+      0%  {width:0;height:0;opacity:1;}
+      60% {width:380px;height:380px;opacity:0.8;}
+      100%{width:500px;height:500px;opacity:0;}
     }
     @keyframes fadeIn{to{opacity:0.8;}}
 
-    /* PANEL — SHOW ONLY LAST 3 SUMMONINGS */
     .panel{
       position:absolute;left:20px;bottom:20px;width:380px;max-height:calc(100vh - 180px);
       background:#000;border:3px solid #00ff41;border-radius:25px;
@@ -201,7 +193,6 @@
     #confirmReset{background:#00ff41;color:#000;box-shadow:0 0 60px #00ff41;}
     #cancelReset{background:#333;color:#00ff41;border:2px solid #00ff41;}
 
-    /* POPUP */
     .leaflet-popup-content-wrapper {
       background: #000 !important; color: #0f0 !important;
       border: 3px solid #00ff41 !important; border-radius: 20px !important;
@@ -230,22 +221,18 @@
 
   <div id="map"></div>
 
-  <!-- TITLE BAR -->
   <div class="title-bar">
     <div id="ritualLogo"><img src="ritualnet-logo.png"></div>
     <div class="title-text" id="titleLink">RITUALNET</div>
   </div>
 
-  <!-- SUBTITLE -->
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
-  <!-- PANEL — LAST 3 ONLY -->
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent"></div>
   </div>
 
-  <!-- MODAL -->
   <div class="modal" id="ritualModal">
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
@@ -259,14 +246,12 @@
     </div>
   </div>
 
-  <!-- SUCCESS — WITH EXPANDING CIRCLE -->
   <div class="success" id="success">
     <div class="ritual-circle"></div>
     <h1>YOU ARE RITUALIZED</h1>
     <p>The circle grows stronger.</p>
   </div>
 
-  <!-- RESET CONFIRM -->
   <div id="resetConfirm">
     <div>RESET THE CIRCLE?</div>
     <button id="confirmReset">BURN IT ALL</button>
@@ -311,14 +296,12 @@
     function loadAll() {
       let summonings = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
 
-      // Deduplicate by ID
       const seen = new Set();
       summonings = summonings.filter(s => s.id && !seen.has(s.id) && seen.add(s.id));
 
       markers.clearLayers(); 
       recent.innerHTML = '';
 
-      // SHOW ONLY LAST 3 (MOST RECENT)
       const latestThree = summonings.slice(-3).reverse();
 
       latestThree.forEach(s => {
@@ -379,21 +362,21 @@
       const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
       if (!clickedPos) return;
 
-      const newSummon = { 
-        id: Date.now(),
-        name, pledge, avatar, 
-        lat: clickedPos.lat, lng: clickedPos.lng, 
-        timestamp: Date.now() 
-      };
+      const payload = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
+
+      let newSummon = null;
+
+      if (window.__firebase) {
+        const newRef = window.__firebase.push(window.__firebase.summoningsRef, payload);
+        newSummon = { id: newRef.key, ...payload };
+      } else {
+        newSummon = { id: Date.now().toString(), ...payload };
+      }
 
       const all = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
       all.push(newSummon);
       localStorage.setItem('ritualnet_summonings', JSON.stringify(all));
       loadAll();
-
-      if (window.__firebase) {
-        window.__firebase.push(window.__firebase.summoningsRef, newSummon);
-      }
 
       closeModal();
       const success = document.getElementById('success');
@@ -428,12 +411,16 @@
       document.getElementById('resetConfirm').style.display = 'none';
     };
 
-    // Firebase Real-Time Sync
     if (window.__firebase) {
       const { onValue, summoningsRef } = window.__firebase;
       onValue(summoningsRef, (snap) => {
         const data = snap.val();
-        const arr = data ? Object.values(data) : [];
+        if (!data) {
+          localStorage.setItem('ritualnet_summonings', '[]');
+          loadAll();
+          return;
+        }
+        const arr = Object.entries(data).map(([key, val]) => ({ id: key, ...val }));
         localStorage.setItem('ritualnet_summonings', JSON.stringify(arr));
         loadAll();
       });

@@ -122,13 +122,26 @@
     .entry .pledge{color:#00ff88;font-size:15px;margin-top:4px;}
 
     .ritual-marker img{border-radius:50%;border:4px solid #00ff41;box-shadow:0 0 30px #00ff41;}
+
+    /* RESET CONFIRM PANEL */
+    #resetConfirm{
+      position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.98);
+      backdrop-filter:blur(20px);display:none;align-items:center;justify-content:center;
+      flex-direction:column;z-index:400;color:#00ff41;text-align:center;font-family:'Orbitron',sans-serif;
+    }
+    #resetConfirm button{
+      margin:20px;font-size:28px;padding:18px 60px;border-radius:50px;
+      font-family:'Orbitron',sans-serif;font-weight:900;cursor:pointer;
+    }
+    #confirmReset{background:#00ff41;color:#000;box-shadow:0 0 60px #00ff41;}
+    #cancelReset{background:#333;color:#00ff41;border:2px solid #00ff41;}
   </style>
 </head>
 <body>
 
   <div id="map"></div>
 
-  <!-- TITLE BAR – LOGO + RITUALNET + SUBTITLE -->
+  <!-- TITLE BAR -->
   <div class="title-bar">
     <img src="ritualnet-logo.png" id="ritualLogo" alt="Ritualnet">
     <div class="title-text" id="titleLink">RITUALNET</div>
@@ -146,7 +159,7 @@
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
       <h2>PERFORM THE RITUAL</h2>
-      <div class="avatar-circle"><img src="" id="avatarPreview"></div>
+      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview"></div>
       <label class="upload-btn">UPLOAD AVATAR</label>
       <input type="file" id="avatarInput" accept="image/*" style="display:none;">
       <input type="text" class="input-field" id="username" placeholder="X / Twitter username">
@@ -163,10 +176,10 @@
   </div>
 
   <!-- RESET CONFIRM -->
-  <div class="success" id="resetConfirm" style="display:none;font-size:40px;">
+  <div id="resetConfirm">
     <div>RESET THE CIRCLE?</div>
-    <button class="join-btn" id="confirmReset" style="margin:30px 20px 0;font-size:28px;padding:18px 60px;">BURN IT ALL</button>
-    <button class="join-btn" id="cancelReset" style="background:#333;">CANCEL</button>
+    <button id="confirmReset">BURN IT ALL</button>
+    <button id="cancelReset">CANCEL</button>
   </div>
 
   <script>
@@ -177,9 +190,11 @@
     const recent = document.getElementById('recent');
     let clickedPos = null;
     let logoClicks = 0;
+    let clickTimer = null;
 
     const ritualLogo = new Image();
     ritualLogo.src = 'ritualnet-logo.png';
+    ritualLogo.crossOrigin = 'anonymous';
 
     function getSize() {
       const z = map.getZoom();
@@ -193,38 +208,36 @@
       const s = getSize();
       return L.divIcon({
         className: 'ritual-marker',
-        html: `<img src="${src}" style="width:${s}px;height:${s}px;">`,
+        html: `<img src="${src}" style="width:${s}px;height:${s}px;border-radius:50%;border:4px solid #00ff41;box-shadow:0 0 30px #00ff41;">`,
         iconSize: [s, s],
         iconAnchor: [s/2, s/2]
       });
     }
 
-    map.on('zoomend', () => markers.eachLayer(m => m.setIcon(createIcon(m.options.data?.avatar || 'ritualnet-logo.png'))));
+    map.on('zoomend', () => {
+      markers.eachLayer(m => {
+        const data = m.options.data;
+        if (data?.compositeAvatar) {
+          m.setIcon(createIcon(data.compositeAvatar));
+        }
+      });
+    });
 
-    // FADED RITUAL LOGO BEHIND AVATAR IN POPUP
+    // COMPOSITE AVATAR: faint ritual logo behind
     function compositeAvatar(userAvatarUrl, callback) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = 80; canvas.height = 80;
 
-      const logoImg = new Image();
-      logoImg.crossOrigin = 'anonymous';
-      logoImg.src = 'ritualnet-logo.png';
-
       const userImg = new Image();
       userImg.crossOrigin = 'anonymous';
       userImg.src = userAvatarUrl || 'ritualnet-logo.png';
 
-      Promise.all([
-        new Promise(r => { logoImg.onload = r; logoImg.onerror = () => r(); }),
-        new Promise(r => { userImg.onload = r; userImg.onerror = () => r(); })
-      ]).then(() => {
-        // Faint logo behind
-        ctx.globalAlpha = 0.25;
-        ctx.drawImage(logoImg, 0, 0, 80, 80);
+      userImg.onload = () => {
+        ctx.globalAlpha = 0.22;
+        ctx.drawImage(ritualLogo, 0, 0, 80, 80);
         ctx.globalAlpha = 1.0;
 
-        // User avatar on top
         ctx.save();
         ctx.beginPath();
         ctx.arc(40, 40, 36, 0, Math.PI * 2);
@@ -232,7 +245,6 @@
         ctx.drawImage(userImg, 0, 0, 80, 80);
         ctx.restore();
 
-        // Green border
         ctx.strokeStyle = '#00ff41';
         ctx.lineWidth = 4;
         ctx.beginPath();
@@ -240,29 +252,44 @@
         ctx.stroke();
 
         callback(canvas.toDataURL());
-      });
+      };
+
+      userImg.onerror = () => {
+        userImg.src = 'ritualnet-logo.png';
+      };
     }
 
     function loadAll() {
       const summonings = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
-      markers.clearLayers(); recent.innerHTML = '';
-      summonings.slice(-10).reverse().forEach(s => {
-        const icon = createIcon(s.avatar || 'ritualnet-logo.png');
-        const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
+      markers.clearLayers();
+      recent.innerHTML = '';
 
+      summonings.slice(-10).reverse().forEach(s => {
         compositeAvatar(s.avatar, (compositeUrl) => {
+          s.compositeAvatar = compositeUrl;
+
+          const icon = createIcon(compositeUrl);
+          const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
+
           m.bindPopup(`
-            <div style="color:#0f0;background:#000;padding:16px;border:3px solid #0f0;border-radius:20px;text-align:center;">
-              <img src="${compositeUrl}" width="80" style="border-radius:50%;border:4px solid #0f0;margin-bottom:10px;">
-              <b style="color:#00ff41;">@${s.name}</b><br>
-              <i>"${s.pledge}"</i>
+            <div style="color:#0f0;background:#000;padding:16px;border:3px solid #0f0;border-radius:20px;text-align:center;font-family:'Orbitron',sans-serif;">
+              <img src="${compositeUrl}" width="80" style="border-radius:50%;border:4px solid #0f0;margin-bottom:12px;box-shadow:0 0 20px #0f0;">
+              <b style="color:#00ff41;font-size:18px;">@${s.name}</b><br>
+              <i style="font-size:14px;opacity:0.9;">"${s.pledge}"</i>
             </div>
           `);
-        });
 
-        recent.innerHTML += `<div class="entry"><img src="${s.avatar || 'ritualnet-logo.png'}"><div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div></div>`;
+          const entry = document.createElement('div');
+          entry.className = 'entry';
+          entry.innerHTML = `
+            <img src="${compositeUrl}">
+            <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
+          `;
+          recent.appendChild(entry);
+        });
       });
     }
+
     loadAll();
 
     // RITUALNET → X.COM
@@ -273,16 +300,23 @@
     // MAP CLICK
     map.on('click', e => {
       clickedPos = e.latlng;
-      document.getElementById('ritualModal').style.display = 'flex';
-      document.getElementById('avatarPreview').src = '';
+      document.getElementByQ('ritualModal').style.display = 'flex';
+      document.getElementById('avatarPreview').src = 'ritualnet-logo.png';
       document.getElementById('username').value = '';
       document.getElementById('pledge').value = '';
     });
 
-    const closeModal = () => { document.getElementById('ritualModal').style.display = 'none'; clickedPos = null; };
+    const closeModal = () => {
+      document.getElementById('ritualModal').style.display = 'none';
+      clickedPos = null;
+    };
     document.getElementById('closeBtn').onclick = closeModal;
-    document.querySelector('.modal').onclick = e => { if (e.target.classList.contains('modal')) closeModal(); };
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+    document.querySelector('.modal').onclick = e => {
+      if (e.target.classList.contains('modal')) closeModal();
+    };
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+    });
 
     document.querySelector('.upload-btn').onclick = () => document.getElementById('avatarInput').click();
     document.getElementById('avatarInput').onchange = e => {
@@ -294,12 +328,12 @@
       }
     };
 
-    // JOIN + SUCCESS
+    // JOIN
     document.querySelector('.join-btn').onclick = () => {
       const avatar = document.getElementById('avatarPreview').src;
       const name = document.getElementById('username').value.trim() || "ritualist";
       const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
-      if (!avatar || !clickedPos) return;
+      if (!clickedPos) return;
 
       const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
 
@@ -321,15 +355,24 @@
       }, 3200);
     };
 
-    // 7-CLICK LOGO → BURN IT ALL
+    // 7-CLICK LOGO → BURN IT ALL (FIXED)
     document.getElementById('ritualLogo').onclick = () => {
       logoClicks++;
+
+      // Clear previous timer
+      if (clickTimer) clearTimeout(clickTimer);
+
       if (logoClicks === 7) {
         document.getElementById('resetConfirm').style.display = 'flex';
         logoClicks = 0;
+      } else {
+        // Reset counter after 3 seconds of inactivity
+        clickTimer = setTimeout(() => {
+          logoClicks = 0;
+        }, 3000);
       }
-      setTimeout(() => { if (logoClicks < 7) logoClicks = 0; }, 3000);
     };
+
     document.getElementById('confirmReset').onclick = () => {
       localStorage.removeItem('ritualnet_summonings');
       loadAll();
@@ -338,6 +381,7 @@
       }
       document.getElementById('resetConfirm').style.display = 'none';
     };
+
     document.getElementById('cancelReset').onclick = () => {
       document.getElementById('resetConfirm').style.display = 'none';
     };
@@ -347,7 +391,7 @@
       const { onValue, summoningsRef } = window.__firebase;
       onValue(summoningsRef, (snap) => {
         const data = snap.val();
-        const arr = data ? Object.keys(data).map(k => data[k]) : [];
+        const arr = data ? Object.values(data) : [];
         localStorage.setItem('ritualnet_summonings', JSON.stringify(arr));
         loadAll();
       });

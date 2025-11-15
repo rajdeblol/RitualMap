@@ -11,15 +11,13 @@
     *{margin:0;padding:0;box-sizing:border-box;}
     body{margin:0;background:#000;overflow:hidden;height:100vh;font-family:'Rajdhani',sans-serif;color:#0f0;}
     #map{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;}
-    .leaflet-control-zoom, .leaflet-control-attribution{display:none!important;}
-
-    .title-bar{position:absolute;top:0;left:0;right:0;height:110px;background:linear-gradient(to bottom,rgba(0,30,0,0.98),transparent);display:flex;align-items:center;justify-content:center;gap:25px;z-index:100;user-select:none;}
-    #ritualLogo{width:82px;height:82px;cursor:pointer;filter:drop-shadow(0 0 40px #00ff41);animation:glow 5s infinite alternate;transition:0.3s;}
+    .leaflet-control-zoom,.leaflet-control-attribution{display:none!important;}
+    .title-bar{position:absolute;top:0;left:0;right:0;height:110px;background:linear-gradient(to bottom,rgba(0,30,0,0.98),transparent);display:flex;align-items:center;justify-content:center;gap:25px;z-index:100;}
+    #ritualLogo{width:82px;height:82px;cursor:pointer;filter:drop-shadow(0 0 40px #00ff41);animation:glow 5s infinite alternate;}
     #ritualLogo img{width:100%;height:100%;}
     #ritualLogo:hover{transform:scale(1.25);}
     .title-text{font-family:'Orbitron',sans-serif;font-size:56px;font-weight:900;background:linear-gradient(90deg,#00ff41,#00ff99);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 60px #00ff4188;letter-spacing:12px;cursor:pointer;}
-    .subtitle{position:absolute;top:100px;left:50%;transform:translateX(-50%);font-size:16px;letter-spacing:2px;color:#00ff88;text-shadow:0 0 20px #00ff41;font-family:'Orbitron',sans-serif;white-space:nowrap;z-index:100;}
-
+    .subtitle{position:absolute;top:100px;left:50%;transform:translateX(-50%);font-size:16px;letter-spacing:2px;color:#00ff88;text-shadow:0 0 20px #00ff41;font-family:'Orbitron',sans-serif;z-index:100;}
     @keyframes glow{0%{filter:drop-shadow(0 0 30px #00ff41);}100%{filter:drop-shadow(0 0 70px #00ff41);}}
 
     .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.98);backdrop-filter:blur(20px);display:none;align-items:center;justify-content:center;z-index:200;}
@@ -29,32 +27,24 @@
     .card h2{font-family:'Orbitron',sans-serif;color:#00ff41;font-size:42px;text-shadow:0 0 30px #00ff41;margin-bottom:40px;letter-spacing:8px;}
     .avatar-circle{width:140px;height:140px;border-radius:50%;margin:30px auto;border:6px solid #00ff41;overflow:hidden;background:#000;box-shadow:0 0 60px #00ff4188;}
     .avatar-circle img{width:100%;height:100%;object-fit:cover;}
-    .upload-btn,.input-field,.pledge-field{width:100%;padding:18px;margin:18px 0;background:#001100;border:2px dashed #00ff41;border-radius:20px;color:#00ff88;font-size:18px;text-align:center;cursor:pointer;transition:0.3s;}
+    .upload-btn,.input-field,.pledge-field{width:100%;padding:18px;margin:18px 0;background:#001100;border:2px dashed #00ff41;border-radius:20px;color:#00ff88;font-size:18px;text-align:center;cursor:pointer;}
     .upload-btn:hover,.input-field:focus,.pledge-field:focus{background:#002200;border-style:solid;outline:none;}
     .pledge-field{height:100px;resize:none;text-align:left;padding:20px;}
-    .join-btn{margin-top:30px;padding:20px 80px;background:#00ff41;color:#000;border:none;border-radius:50px;font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;cursor:pointer;box-shadow:0 0 60px #00ff41;transition:0.4s;}
+    .join-btn{margin-top:30px;padding:20px 80px;background:#00ff41;color:#000;border:none;border-radius:50px;font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;cursor:pointer;box-shadow:0 0 60px #00ff41;}
     .join-btn:hover{transform:scale(1.1);box-shadow:0 0 100px #00ff41;}
 
-    .success{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:300;color:#00ff41;text-align:center;opacity:0;visibility:hidden;transition:opacity 0.6s ease;pointer-events:none;}
-    .success.active{opacity:1;visibility:visible;pointer-events:all;}
+    .success{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:300;color:#00ff41;text-align:center;opacity:0;visibility:hidden;transition:opacity 0.6s;}
+    .success.active{opacity:1;visibility:visible;}
     .success h1{font-family:'Orbitron',sans-serif;font-size:64px;text-shadow:0 0 60px #00ff41;}
-    .success p{margin-top:20px;font-size:20px;}
-    .ritual-circle{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:0;height:0;border:4px solid #00ff41;border-radius:50%;box-shadow:0 0 80px #00ff41;animation:expandGlow 2.5s ease-out forwards;opacity:0;}
-    @keyframes expandGlow{0%{width:0;height:0;opacity:1;}60%{width:380px;height:380px;opacity:0.8;}100%{width:500px;height:500px;opacity:0;}}
+    .ritual-circle{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:0;height:0;border:4px solid #00ff41;border-radius:50%;box-shadow:0 0 80px #00ff41;animation:expand 2.5s ease-out forwards;opacity:0;}
+    @keyframes expand{0%{width:0;height:0;opacity:1;}60%{width:380px;height:380px;opacity:0.8;}100%{width:500px;height:500px;opacity:0;}}
 
-    .panel{position:absolute;left:20px;bottom:20px;width:380px;max-height:calc(100vh - 180px);background:#000;border:3px solid #00ff41;border-radius:25px;padding:20px;box-shadow:0 0 80px rgba(0,255,65,0.6);z-index:10;overflow-y:auto;}
+    .panel{position:absolute;left:20px;bottom:20px;width:380px;max-height:calc(100vh-180px);background:#000;border:3px solid #00ff41;border-radius:25px;padding:20px;box-shadow:0 0 80px rgba(0,255,65,0.6);z-index:10;overflow-y:auto;}
     .panel h3{font-family:'Orbitron',sans-serif;color:#00ff41;font-size:28px;text-shadow:0 0 25px #00ff41;margin-bottom:15px;text-align:center;background:#001100;padding:12px;border-radius:20px;}
     .entry{display:flex;align-items:center;margin:12px 0;padding:14px;background:rgba(0,255,65,0.08);border:2px solid #00ff41;border-radius:20px;}
     .entry img{width:48px;height:48px;border-radius:50%;border:3px solid #00ff41;margin-right:15px;box-shadow:0 0 30px #00ff4188;}
     .entry .name{color:#00ff88;font-weight:bold;font-family:'Orbitron',sans-serif;font-size:17px;text-align:center;flex:1;}
     .entry .pledge{color:#00ff88;font-size:14px;margin-top:4px;text-align:center;flex:1;}
-
-    .leaflet-popup-content-wrapper {background: #000 !important; color: #0f0 !important;border: 3px solid #00ff41 !important; border-radius: 20px !important;}
-    .leaflet-popup-content {margin: 0 !important; padding: 16px !important; text-align: center !important;}
-    .leaflet-popup-content img {width: 80px !important; height: 80px !important; border-radius: 50% !important;border: 4px solid #00ff41 !important; margin-bottom: 12px !important;}
-    .leaflet-popup-content b { color: #00ff41 !important; font-size: 18px !important; display: block; margin: 8px 0; }
-    .leaflet-popup-content i { font-size: 14px !important; opacity: 0.9; display: block; }
-    .leaflet-popup-tip { background: #00ff41 !important; }
   </style>
 </head>
 <body>
@@ -62,7 +52,7 @@
   <div id="map"></div>
   <div class="title-bar">
     <div id="ritualLogo"><img src="https://i.imgur.com/8Y7K8vP.png" alt="Logo"></div>
-    <div class="title-text" id="titleLink">RITUALNET</div>
+    <div class="title-text">RITUALNET</div>
   </div>
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
@@ -75,7 +65,7 @@
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
       <h2>PERFORM THE RITUAL</h2>
-      <div class="avatar-circle"><img src="https://i.imgur.com/8Y7K8vP.png" id="avatarPreview" alt="Avatar"></div>
+      <div class="avatar-circle"><img src="https://i.imgur.com/8Y7K8vP.png" id="avatarPreview"></div>
       <label class="upload-btn">UPLOAD AVATAR</label>
       <input type="file" id="avatarInput" accept="image/*" style="display:none;">
       <input type="text" class="input-field" id="username" placeholder="X / Twitter username">
@@ -93,32 +83,29 @@
   <script>
     const API_BASE = '/api';
     const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([10, 0], 2);
-    L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png').addTo(map);
 
     const markers = L.layerGroup().addTo(map);
     const recent = document.getElementById('recent');
     let clickedPos = null;
 
     function createIcon(src) {
-      const s = 50;
       return L.divIcon({
         className: 'ritual-marker',
-        html: `<img src="${src}" style="width:${s}px;height:${s}px;">`,
-        iconSize: [s, s],
-        iconAnchor: [s/2, s/2]
+        html: `<img src="${src}" style="width:50px;height:50px;">`,
+        iconSize: [50, 50],
+        iconAnchor: [25, 25]
       });
     }
 
-    function renderSummonings(summonings) {
-      const seen = new Set();
-      const deduped = summonings.filter(s => s.id && !seen.has(s.id) && seen.add(s.id)).slice(-3).reverse();
-
+    function render(summonings) {
+      const deduped = summonings.filter((s, i, a) => a.findIndex(t => t.id === s.id) === i).slice(-3).reverse();
       markers.clearLayers();
       recent.innerHTML = '';
 
       deduped.forEach(s => {
         const icon = createIcon(s.avatar || 'https://i.imgur.com/8Y7K8vP.png');
-        const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
+        const m = L.marker([s.lat, s.lng], { icon }).addTo(markers);
         m.bindPopup(`<img src="${s.avatar || 'https://i.imgur.com/8Y7K8vP.png'}"><b>@${s.name}</b><i>"${s.pledge}"</i>`);
 
         const entry = document.createElement('div');
@@ -128,20 +115,20 @@
       });
     }
 
-    async function loadSummonings() {
+    async function sync() {
       try {
         const res = await fetch(`${API_BASE}/load`);
         if (!res.ok) throw new Error();
         const data = await res.json();
-        localStorage.setItem('ritualnet_data', JSON.stringify(data));
-        renderSummonings(data);
+        localStorage.setItem('ritualnet', JSON.stringify(data));
+        render(data);
       } catch (e) {
-        renderSummonings(JSON.parse(localStorage.getItem('ritualnet_data') || '[]'));
+        render(JSON.parse(localStorage.getItem('ritualnet') || '[]'));
       }
     }
 
-    loadSummonings();
-    setInterval(loadSummonings, 3000);
+    sync();
+    setInterval(sync, 3000); // GLOBAL SYNC
 
     map.on('click', e => {
       clickedPos = e.latlng;
@@ -183,15 +170,12 @@
         const result = await res.json();
 
         if (result.success && result.data) {
-          const newSummoning = result.data;
-          const current = JSON.parse(localStorage.getItem('ritualnet_data') || '[]');
-          current.push(newSummoning);
-          localStorage.setItem('ritualnet_data', JSON.stringify(current));
-          renderSummonings(current);
+          const current = JSON.parse(localStorage.getItem('ritualnet') || '[]');
+          current.push(result.data);
+          localStorage.setItem('ritualnet', JSON.stringify(current));
+          render(current); // INSTANT
         }
-      } catch (e) {
-        console.error("Join failed:", e);
-      }
+      } catch (e) {}
 
       document.getElementById('ritualModal').style.display = 'none';
       const success = document.getElementById('success');

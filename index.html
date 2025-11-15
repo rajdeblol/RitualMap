@@ -6,27 +6,7 @@
   <title>RITUALNET</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- Firebase v9 — ASIA REGION FOR INDIA -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyAsSQ-i34f0BErk3qwNMK4QET07FbCvjWk",
-      authDomain: "ritual-65fc5.firebaseapp.com",
-      databaseURL: "https://ritual-65fc5-default-rtdb.asia-southeast1.firebasedatabase.app/",
-      projectId: "ritual-65fc5",
-      storageBucket: "ritual-65fc5.firebasestorage.app",
-      messagingSenderId: "249645412824",
-      appId: "1:249645412824:web:159f0919dd0c4c18fc02ad"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const summoningsRef = ref(db, 'ritualnet/summonings');
-    window.__firebase = { onValue, push, remove, summoningsRef };
-  </script>
+  <script src="/socket.io/socket.io.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
@@ -35,7 +15,6 @@
     #map{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;}
     .leaflet-control-zoom, .leaflet-control-attribution{display:none!important;}
 
-    /* TITLE BAR */
     .title-bar{
       position:absolute;top:0;left:0;right:0;height:110px;
       background:linear-gradient(to bottom,rgba(0,30,0,0.98),transparent);
@@ -112,7 +91,6 @@
       font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;cursor:pointer;box-shadow:0 0 60px #00ff41;transition:0.4s;}
     .join-btn:hover{transform:scale(1.1);box-shadow:0 0 100px #00ff41;}
 
-    /* SUCCESS — CENTERED + GLOWING CIRCLE */
     .success{
       position:fixed;top:0;left:0;width:100%;height:100%;background:#000;
       display:flex;align-items:center;justify-content:center;flex-direction:column;
@@ -142,7 +120,6 @@
     }
     @keyframes fadeIn{to{opacity:0.8;}}
 
-    /* PANEL — LAST 3 ONLY */
     .panel{
       position:absolute;left:20px;bottom:20px;width:380px;max-height:calc(100vh - 180px);
       background:#000;border:3px solid #00ff41;border-radius:25px;
@@ -193,7 +170,6 @@
     #confirmReset{background:#00ff41;color:#000;box-shadow:0 0 60px #00ff41;}
     #cancelReset{background:#333;color:#00ff41;border:2px solid #00ff41;}
 
-    /* POPUP */
     .leaflet-popup-content-wrapper {
       background: #000 !important; color: #0f0 !important;
       border: 3px solid #00ff41 !important; border-radius: 20px !important;
@@ -222,22 +198,18 @@
 
   <div id="map"></div>
 
-  <!-- TITLE BAR -->
   <div class="title-bar">
     <div id="ritualLogo"><img src="ritualnet-logo.png"></div>
     <div class="title-text" id="titleLink">RITUALNET</div>
   </div>
 
-  <!-- SUBTITLE -->
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
-  <!-- PANEL -->
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent"></div>
   </div>
 
-  <!-- MODAL -->
   <div class="modal" id="ritualModal">
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
@@ -251,14 +223,12 @@
     </div>
   </div>
 
-  <!-- SUCCESS -->
   <div class="success" id="success">
     <div class="ritual-circle"></div>
     <h1>YOU ARE RITUALIZED</h1>
     <p>The circle grows stronger.</p>
   </div>
 
-  <!-- RESET CONFIRM -->
   <div id="resetConfirm">
     <div>RESET THE CIRCLE?</div>
     <button id="confirmReset">BURN IT ALL</button>
@@ -274,6 +244,8 @@
     let clickedPos = null;
     let logoClicks = 0;
     let clickTimer = null;
+
+    const socket = io();
 
     function getSize() {
       const z = map.getZoom();
@@ -300,23 +272,17 @@
       });
     });
 
-    function loadAll() {
-      let summonings = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
-
-      // Deduplicate by ID
+    function renderSummonings(summonings) {
       const seen = new Set();
-      summonings = summonings.filter(s => s.id && !seen.has(s.id) && seen.add(s.id));
-
-      markers.clearLayers(); 
+      const deduped = summonings.filter(s => s.id && !seen.has(s.id) && seen.add(s.id));
+      markers.clearLayers();
       recent.innerHTML = '';
 
-      // LAST 3 ONLY
-      const latestThree = summonings.slice(-3).reverse();
+      const latestThree = deduped.slice(-3).reverse();
 
       latestThree.forEach(s => {
         const icon = createIcon(s.avatar || 'ritualnet-logo.png');
         const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
-
         m.bindPopup(`
           <div style="position:relative;text-align:center;">
             <img src="${s.avatar || 'ritualnet-logo.png'}">
@@ -335,7 +301,16 @@
       });
     }
 
-    loadAll();
+    // Load initial + real-time
+    socket.on('load', renderSummonings);
+    socket.on('new', (data) => {
+      renderSummonings([...JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]'), data]);
+    });
+
+    // Save to localStorage for offline
+    socket.on('load', (data) => {
+      localStorage.setItem('ritualnet_summonings', JSON.stringify(data));
+    });
 
     document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
 
@@ -371,26 +346,9 @@
       const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
       if (!clickedPos) return;
 
-      const payload = { 
-        name, pledge, avatar, 
-        lat: clickedPos.lat, lng: clickedPos.lng, 
-        timestamp: Date.now() 
-      };
+      const payload = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng };
+      socket.emit('join', payload);
 
-      if (window.__firebase) {
-        const newRef = window.__firebase.push(window.__firebase.summoningsRef, payload);
-        const newSummon = { id: newRef.key, ...payload };
-        const all = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
-        all.push(newSummon);
-        localStorage.setItem('ritualnet_summonings', JSON.stringify(all));
-      } else {
-        const newSummon = { id: Date.now().toString(), ...payload };
-        const all = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
-        all.push(newSummon);
-        localStorage.setItem('ritualnet_summonings', JSON.stringify(all));
-      }
-
-      loadAll();
       closeModal();
       const success = document.getElementById('success');
       success.classList.add('active');
@@ -413,30 +371,13 @@
 
     document.getElementById('confirmReset').onclick = () => {
       localStorage.removeItem('ritualnet_summonings');
-      loadAll();
-      if (window.__firebase) window.__firebase.remove(window.__firebase.summoningsRef);
+      renderSummonings([]);
       document.getElementById('resetConfirm').style.display = 'none';
     };
 
     document.getElementById('cancelReset').onclick = () => {
       document.getElementById('resetConfirm').style.display = 'none';
     };
-
-    // GLOBAL REAL-TIME SYNC
-    if (window.__firebase) {
-      const { onValue, summoningsRef } = window.__firebase;
-      onValue(summoningsRef, (snap) => {
-        const data = snap.val();
-        if (!data) {
-          localStorage.setItem('ritualnet_summonings', '[]');
-          loadAll();
-          return;
-        }
-        const arr = Object.entries(data).map(([key, val]) => ({ id: key, ...val }));
-        localStorage.setItem('ritualnet_summonings', JSON.stringify(arr));
-        loadAll();
-      });
-    }
   </script>
 </body>
 </html>

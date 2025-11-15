@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Firebase v9 -->
+  <!-- Firebase v9 Modular SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
@@ -31,7 +31,7 @@
       const data = snapshot.val();
       const summonings = data ? Object.values(data) : [];
       localStorage.setItem('ritualnet_summonings', JSON.stringify(summonings));
-      if (window.loadAll) window.loadAll(); // FORCE UPDATE
+      if (window.loadAll) window.loadAll();
     }, { onlyOnce: false });
 
     window.__firebase = { push, remove, summoningsRef };
@@ -135,7 +135,7 @@
     }
     .join-btn:hover{transform:scale(1.1);box-shadow:0 0 100px #00ff41;}
 
-    /* SUCCESS — CENTERED + RESPONSIVE */
+    /* SUCCESS ANIMATION — CENTERED & VISIBLE */
     .success{
       position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
       width:100%;max-width:600px;padding:40px;
@@ -245,7 +245,7 @@
   <div id="map"></div>
 
   <div class="title-bar">
-    <div id="ritualLogo"><img src="ritualnet-logo.png"></div>
+    <div id="ritualLogo"><img src="ritualnet-logo.png" alt="Ritual Logo"></div>
     <div class="title-text" id="titleLink">RITUALNET</div>
   </div>
 
@@ -260,7 +260,7 @@
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
       <h2>PERFORM THE RITUAL</h2>
-      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview"></div>
+      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview" alt="Avatar"></div>
       <label class="upload-btn">UPLOAD AVATAR</label>
       <input type="file" id="avatarInput" accept="image/*" style="display:none;">
       <input type="text" class="input-field" id="username" placeholder="X / Twitter username">
@@ -269,7 +269,7 @@
     </div>
   </div>
 
-  <!-- CENTERED + RESPONSIVE -->
+  <!-- SUCCESS ANIMATION: YOU ARE RITUALIZED -->
   <div class="success" id="success">
     <div class="ritual-circle"></div>
     <h1>YOU ARE RITUALIZED</h1>
@@ -317,7 +317,6 @@
       });
     });
 
-    // FORCE RELOAD MARKERS
     window.loadAll = function() {
       const summonings = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
       markers.clearLayers(); recent.innerHTML = '';
@@ -346,10 +345,9 @@
       });
     };
 
-    // INITIAL LOAD
     window.loadAll();
 
-    document.getElementById('titleLink').onclick = () => window.open('https://x ophthalm.com/ritualnet', '_blank');
+    document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
 
     map.on('click', e => {
       clickedPos = e.latlng;
@@ -378,6 +376,7 @@
       }
     };
 
+    // JOIN THE CIRCLE → SUCCESS ANIMATION
     document.querySelector('.join-btn').onclick = () => {
       const avatar = document.getElementById('avatarPreview').src;
       const name = document.getElementById('username').value.trim() || "ritualist";
@@ -396,12 +395,14 @@
               success.classList.remove('active');
               map.flyTo(clickedPos, 10, { duration: 1.8 });
             }, 3200);
-          });
+          })
+          .catch(err => console.error("Firebase error:", err));
       } else {
         closeModal();
       }
     };
 
+    // 7-CLICK RESET
     document.getElementById('ritualLogo').onclick = () => {
       logoClicks++;
       if (clickTimer) clearTimeout(clickTimer);
@@ -414,7 +415,11 @@
     };
 
     document.getElementById('confirmReset').onclick = () => {
-      if (window.__firebase) window.__firebase.remove(window.__firebase.summoningsRef);
+      if (window.__firebase) {
+        window.__firebase.remove(window.__firebase.summoningsRef)
+          .then(() => localStorage.removeItem('ritualnet_summonings'))
+          .then(() => window.loadAll());
+      }
       document.getElementById('resetConfirm').style.display = 'none';
     };
 

@@ -49,30 +49,17 @@
       transition:0.3s;
     }
     #ritualLogo:hover{transform:scale(1.25);}
-
-    /* RITUALNET TEXT – ANIMATED LIKE LOGO */
     .title-text{
       font-family:'Orbitron',sans-serif;font-size:56px;font-weight:900;
       background:linear-gradient(90deg,#00ff41,#00ff99);
       -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-      text-shadow:0 0 60px #00ff4188;
-      letter-spacing:12px;
-      cursor:pointer;
-      animation: textGlow 5s infinite alternate;
+      text-shadow:0 0 60px #00ff4188;letter-spacing:12px;cursor:pointer;
     }
-    @keyframes glow{
-      0%{filter:drop-shadow(0 0 30px #00ff41);}
-      100%{filter:drop-shadow(0 0 70px #00ff41);}
-    }
-    @keyframes textGlow{
-      0%{text-shadow:0 0 50px #00ff4188;}
-      100%{text-shadow:0 0 90px #00ff41cc;}
-    }
-
     .subtitle{
       position:absolute;bottom:15px;left:50%;transform:translateX(-50%);
       font-size:16px;letter-spacing:2px;color:#00ff88;text-shadow:0 0 20px #00ff41;
     }
+    @keyframes glow{0%{filter:drop-shadow(0 0 30px #00ff41);}100%{filter:drop-shadow(0 0 70px #00ff41);}}
 
     .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.98);backdrop-filter:blur(20px);
       display:none;align-items:center;justify-content:center;z-index:200;}
@@ -141,7 +128,7 @@
 
   <div id="map"></div>
 
-  <!-- TITLE BAR – LOGO + ANIMATED RITUALNET -->
+  <!-- TITLE BAR – LOGO + RITUALNET + SUBTITLE -->
   <div class="title-bar">
     <img src="ritualnet-logo.png" id="ritualLogo" alt="Ritualnet">
     <div class="title-text" id="titleLink">RITUALNET</div>
@@ -214,7 +201,7 @@
 
     map.on('zoomend', () => markers.eachLayer(m => m.setIcon(createIcon(m.options.data?.avatar || 'ritualnet-logo.png'))));
 
-    // FADED LOGO BEHIND AVATAR
+    // FADED RITUAL LOGO BEHIND AVATAR IN POPUP
     function compositeAvatar(userAvatarUrl, callback) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -232,10 +219,12 @@
         new Promise(r => { logoImg.onload = r; logoImg.onerror = () => r(); }),
         new Promise(r => { userImg.onload = r; userImg.onerror = () => r(); })
       ]).then(() => {
+        // Faint logo behind
         ctx.globalAlpha = 0.25;
         ctx.drawImage(logoImg, 0, 0, 80, 80);
         ctx.globalAlpha = 1.0;
 
+        // User avatar on top
         ctx.save();
         ctx.beginPath();
         ctx.arc(40, 40, 36, 0, Math.PI * 2);
@@ -243,6 +232,7 @@
         ctx.drawImage(userImg, 0, 0, 80, 80);
         ctx.restore();
 
+        // Green border
         ctx.strokeStyle = '#00ff41';
         ctx.lineWidth = 4;
         ctx.beginPath();

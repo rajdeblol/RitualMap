@@ -7,27 +7,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Firebase v9 -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyAsSQ-i34f0BErk3qwNMK4QET07FbCvjWk",
-      authDomain: "ritual-65fc5.firebaseapp.com",
-      databaseURL: "https://ritual-65fc5-default-rtdb.firebaseio.com",
-      projectId: "ritual-65fc5",
-      storageBucket: "ritual-65fc5.firebasestorage.app",
-      messagingSenderId: "249645412824",
-      appId: "1:249645412824:web:159f0919dd0c4c18fc02ad"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const summoningsRef = ref(db, 'ritualnet/summonings');
-    window.__firebase = { onValue, push, remove, summoningsRef };
-  </script>
-
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -226,7 +205,7 @@
 
   <!-- TITLE BAR -->
   <div class="title-bar">
-    <div id="ritualLogo"><img src="ritualnet-logo.png"></div>
+    <div id="ritualLogo"><img src="ritualnet-logo.png" alt="ritual logo"></div>
     <div class="title-text" id="titleLink">RITUALNET</div>
   </div>
 
@@ -244,12 +223,12 @@
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
       <h2>PERFORM THE RITUAL</h2>
-      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview"></div>
-      <label class="upload-btn">UPLOAD AVATAR</label>
+      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview" alt="avatar preview"></div>
+      <label class="upload-btn" id="uploadBtn">UPLOAD AVATAR</label>
       <input type="file" id="avatarInput" accept="image/*" style="display:none;">
       <input type="text" class="input-field" id="username" placeholder="X / Twitter username">
       <textarea class="pledge-field input-field" id="pledge" placeholder="Speak your pledge..."></textarea>
-      <button class="join-btn">JOIN THE CIRCLE</button>
+      <button class="join-btn" id="joinBtn">JOIN THE CIRCLE</button>
     </div>
   </div>
 
@@ -267,7 +246,27 @@
     <button id="cancelReset">CANCEL</button>
   </div>
 
-  <script>
+  <script type="module">
+    // Firebase v9 modular imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAsSQ-i34f0BErk3qwNMK4QET07FbCvjWk",
+      authDomain: "ritual-65fc5.firebaseapp.com",
+      databaseURL: "https://ritual-65fc5-default-rtdb.firebaseio.com",
+      projectId: "ritual-65fc5",
+      storageBucket: "ritual-65fc5.firebasestorage.app",
+      messagingSenderId: "249645412824",
+      appId: "1:249645412824:web:159f0919dd0c4c18fc02ad"
+    };
+
+    // init
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const summoningsRef = ref(db, 'ritualnet/summonings');
+
+    // Map init
     const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([10, 0], 2);
     L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
@@ -302,17 +301,26 @@
       });
     });
 
-    function loadAll() {
+    // load from localStorage and render
+    function loadAllFromLocal() {
       const summonings = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
       markers.clearLayers(); recent.innerHTML = '';
 
-      summonings.slice(-10).reverse().forEach(s => {
-        const icon = createIcon(s.avatar || 'ritualnet-logo.png');
+      // show latest 10
+      (Array.isArray(summonings) ? summonings : []).slice(-10).reverse().forEach(s => {
+        // ensure defaults
+        s.avatar = s.avatar || 'ritualnet-logo.png';
+        s.name = s.name || 'ritualist';
+        s.pledge = s.pledge || 'I have joined.';
+        s.lat = typeof s.lat === 'number' ? s.lat : 0;
+        s.lng = typeof s.lng === 'number' ? s.lng : 0;
+
+        const icon = createIcon(s.avatar);
         const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
 
         m.bindPopup(`
           <div style="position:relative;text-align:center;">
-            <img src="${s.avatar || 'ritualnet-logo.png'}">
+            <img src="${s.avatar}">
             <b>@${s.name}</b>
             <i>"${s.pledge}"</i>
           </div>
@@ -321,15 +329,42 @@
         const entry = document.createElement('div');
         entry.className = 'entry';
         entry.innerHTML = `
-          <img src="${s.avatar || 'ritualnet-logo.png'}">
+          <img src="${s.avatar}">
           <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
         `;
         recent.appendChild(entry);
       });
     }
 
-    loadAll();
+    // Convert DB snapshot object -> array sorted by timestamp (if present)
+    function snapshotToArray(obj) {
+      if (!obj) return [];
+      // if it's already an array, return copy
+      if (Array.isArray(obj)) return obj.slice();
+      // otherwise obj is keyed by push id
+      const arr = Object.values(obj).map(v => v);
+      // try to sort by timestamp so newest last
+      arr.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      return arr;
+    }
 
+    // Listen DB changes and sync to localStorage + UI
+    onValue(summoningsRef, (snap) => {
+      const raw = snap.val();
+      const arr = snapshotToArray(raw);
+      // persist to localStorage so users who reload still see things
+      localStorage.setItem('ritualnet_summonings', JSON.stringify(arr));
+      loadAllFromLocal();
+    }, (err) => {
+      // If DB read fails, fallback to localStorage display
+      console.warn('Firebase onValue error:', err);
+      loadAllFromLocal();
+    });
+
+    // initial render from localStorage (fast)
+    loadAllFromLocal();
+
+    // UI behaviors
     document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
 
     map.on('click', e => {
@@ -348,7 +383,7 @@
     document.querySelector('.modal').onclick = e => { if (e.target.classList.contains('modal')) closeModal(); };
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-    document.querySelector('.upload-btn').onclick = () => document.getElementById('avatarInput').click();
+    document.getElementById('uploadBtn').onclick = () => document.getElementById('avatarInput').click();
     document.getElementById('avatarInput').onchange = e => {
       const file = e.target.files[0];
       if (file) {
@@ -358,19 +393,35 @@
       }
     };
 
-    document.querySelector('.join-btn').onclick = () => {
-      const avatar = document.getElementById('avatarPreview').src;
-      const name = document.getElementById('username').value.trim() || "ritualist";
-      const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
+    document.getElementById('joinBtn').onclick = async () => {
+      const avatar = document.getElementById('avatarPreview').src || 'ritualnet-logo.png';
+      let name = (document.getElementById('username').value || "ritualist").trim();
+      if (name.startsWith('@')) name = name.slice(1);
+      const pledge = (document.getElementById('pledge').value || "I have joined.").trim() || "I have joined.";
       if (!clickedPos) return;
 
-      const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
-      const all = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
-      all.push(newSummon);
-      localStorage.setItem('ritualnet_summonings', JSON.stringify(all));
-      loadAll();
+      const newSummon = {
+        name,
+        pledge,
+        avatar,
+        lat: Number(clickedPos.lat),
+        lng: Number(clickedPos.lng),
+        timestamp: Date.now()
+      };
 
-      if (window.__firebase) window.__firebase.push(window.__firebase.summoningsRef, newSummon);
+      // push to localStorage first (optimistic)
+      const existing = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
+      existing.push(newSummon);
+      localStorage.setItem('ritualnet_summonings', JSON.stringify(existing));
+      loadAllFromLocal();
+
+      // push to Firebase
+      try {
+        await push(summoningsRef, newSummon);
+      } catch (err) {
+        console.error('Firebase push error:', err);
+        // keep local copy; DB will sync when connection/permission fixed
+      }
 
       closeModal();
       const success = document.getElementById('success');
@@ -381,6 +432,7 @@
       }, 3200);
     };
 
+    // easter reset
     document.getElementById('ritualLogo').onclick = () => {
       logoClicks++;
       if (clickTimer) clearTimeout(clickTimer);
@@ -392,26 +444,21 @@
       }
     };
 
-    document.getElementById('confirmReset').onclick = () => {
+    document.getElementById('confirmReset').onclick = async () => {
       localStorage.removeItem('ritualnet_summonings');
-      loadAll();
-      if (window.__firebase) window.__firebase.remove(window.__firebase.summoningsRef);
+      loadAllFromLocal();
+      // remove DB data (if allowed by rules)
+      try {
+        await remove(summoningsRef);
+      } catch (err) {
+        console.error('Firebase remove error:', err);
+      }
       document.getElementById('resetConfirm').style.display = 'none';
     };
 
     document.getElementById('cancelReset').onclick = () => {
       document.getElementById('resetConfirm').style.display = 'none';
     };
-
-    if (window.__firebase) {
-      const { onValue, summoningsRef } = window.__firebase;
-      onValue(summoningsRef, (snap) => {
-        const data = snap.val();
-        const arr = data ? Object.values(data) : [];
-        localStorage.setItem('ritualnet_summonings', JSON.stringify(arr));
-        loadAll();
-      });
-    }
   </script>
 </body>
 </html>

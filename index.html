@@ -12,9 +12,7 @@
 
   <!-- Supabase Init -->
   <script>
-    const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpg
-
-v.supabase.co';
+    const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpgv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndHRmaXFld253cHFndWhicGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTY1ODgsImV4cCI6MjA3ODc3MjU4OH0.zVK46pTGH0_Ruu20s35ep8NnsQd2ROenG_EuWezXiWg';
     const { createClient } = window.supabase;
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -25,20 +23,10 @@ v.supabase.co';
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
     *{margin:0;padding:0;box-sizing:border-box;}
     html, body {
-      margin:0;
-      padding:0;
-      background:#000;
-      overflow:hidden;
-      height:100dvh; /* MOBILE FIX: Full viewport height */
-      width:100vw;
-      font-family:'Rajdhani',sans-serif;
-      color:#0f0;
+      margin:0;padding:0;background:#000;overflow:hidden;height:100dvh;width:100vw;
+      font-family:'Rajdhani',sans-serif;color:#0f0;touch-action: manipulation;
     }
-    #map{
-      position:absolute;
-      top:0; left:0; width:100%; height:100dvh; /* FULL HEIGHT */
-      z-index:1;
-    }
+    #map{position:absolute;top:0;left:0;width:100%;height:100dvh;z-index:1;}
     .leaflet-control-zoom, .leaflet-control-attribution{display:none!important;}
 
     /* TITLE BAR */
@@ -51,8 +39,7 @@ v.supabase.co';
       width:82px;height:82px;cursor:pointer;
       filter:drop-shadow(0 0 40px #00ff41);
       animation:glow 5s infinite alternate;
-      transition:0.3s;
-      position:relative;
+      transition:0.3s;position:relative;
     }
     #ritualLogo img{width:100%;height:100%;position:absolute;top:0;left:0;z-index:2;}
     #ritualLogo::before{
@@ -90,14 +77,30 @@ v.supabase.co';
       50%{opacity:0.25;transform:translate(-50%,-50%) scale(1.08);}
     }
 
-    .modal{position:fixed;top:0;left:0;width:100%;height:100dvh;background:rgba(0,0,0,0.98);backdrop-filter:blur(20px);
-      display:none;align-items:center;justify-content:center;z-index:200; padding: 20px;}
-    .card{width:430px;max-width:95vw;background:#000;padding:50px 40px;border:3px solid #00ff41;border-radius:30px;
-      text-align:center;position:relative;box-shadow:0 0 100px rgba(0,255,65,0.7);}
-    .close-btn{position:absolute;top:20px;right:25px;width:40px;height:40px;background:transparent;
-      border:2px solid #00ff41;border-radius:50%;color:#00ff41;font-size:28px;cursor:pointer;}
+    /* MODAL — FIXED FOR MOBILE */
+    .modal{
+      position:fixed;top:0;left:0;width:100%;height:100dvh;
+      background:rgba(0,0,0,0.98);backdrop-filter:blur(20px);
+      display:none;align-items:center;justify-content:center;
+      z-index:200;padding:20px;overflow-y:auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .card{
+      width:430px;max-width:95vw;background:#000;padding:50px 40px;
+      border:3px solid #00ff41;border-radius:30px;
+      text-align:center;position:relative;
+      box-shadow:0 0 100px rgba(0,255,65,0.7);
+    }
+    .close-btn{
+      position:absolute;top:20px;right:25px;width:40px;height:40px;
+      background:transparent;border:2px solid #00ff41;border-radius:50%;
+      color:#00ff41;font-size:28px;cursor:pointer;
+    }
     .close-btn:hover{background:#00ff4111;transform:rotate(90deg);}
-    .card h2{font-family:'Orbitron',sans-serif;color:#00ff41;font-size:42px;text-shadow:0 0 30px #00ff41;margin-bottom:40px;letter-spacing:8px;}
+    .card h2{
+      font-family:'Orbitron',sans-serif;color:#00ff41;font-size:42px;
+      text-shadow:0 0 30px #00ff41;margin-bottom:40px;letter-spacing:8px;
+    }
     
     .avatar-circle{
       width:140px;height:140px;border-radius:50%;margin:30px auto;
@@ -111,12 +114,21 @@ v.supabase.co';
       opacity:0.18;z-index:1;pointer-events:none;animation:ritualPulse 6s infinite ease-in-out;
     }
 
-    .upload-btn,.input-field,.pledge-field{width:100%;padding:18px;margin:18px 0;background:#001100;
-      border:2px dashed #00ff41;border-radius:20px;color:#00ff88;font-size:18px;text-align:center;cursor:pointer;transition:0.3s;}
-    .upload-btn:hover,.input-field:focus,.pledge-field:focus{background:#002200;border-style:solid;outline:none;}
+    .upload-btn,.input-field,.pledge-field{
+      width:100%;padding:18px;margin:18px 0;background:#001100;
+      border:2px dashed #00ff41;border-radius:20px;color:#00ff88;
+      font-size:18px;text-align:center;cursor:pointer;transition:0.3s;
+    }
+    .upload-btn:hover,.input-field:focus,.pledge-field:focus{
+      background:#002200;border-style:solid;outline:none;
+    }
     .pledge-field{height:100px;resize:none;text-align:left;padding:20px;}
-    .join-btn{margin-top:30px;padding:20px 80px;background:#00ff41;color:#000;border:none;border-radius:50px;
-      font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;cursor:pointer;box-shadow:0 0 60px #00ff41;transition:0.4s;}
+    .join-btn{
+      margin-top:30px;padding:20px 80px;background:#00ff41;color:#000;
+      border:none;border-radius:50px;font-family:'Orbitron',sans-serif;
+      font-size:28px;font-weight:900;cursor:pointer;
+      box-shadow:0 0 60px #00ff41;transition:0.4s;
+    }
     .join-btn:hover{transform:scale(1.1);box-shadow:0 0 100px #00ff41;}
 
     .success{
@@ -147,23 +159,13 @@ v.supabase.co';
     }
     @keyframes fadeIn{to{opacity:0.8;}}
 
-    /* PANEL — MOBILE FRIENDLY, SCROLLABLE, LATEST 3 VISIBLE */
+    /* PANEL — SMOOTH SCROLL */
     .panel{
-      position:absolute;
-      left:20px; bottom:20px;
-      width:380px; max-width:calc(100vw - 40px);
-      max-height:70vh;
-      background:#000;
-      border:3px solid #00ff41;
-      border-radius:25px;
-      padding:20px;
-      box-shadow:0 0 80px rgba(0,255,65,0.6);
-      z-index:10;
-      overflow-y:auto;
-      display:flex; flex-direction:column;
-      /* Smooth scroll + snap */
-      scroll-behavior: smooth;
-      overscroll-behavior: contain;
+      position:absolute;left:20px;bottom:20px;width:380px;max-width:calc(100vw - 40px);
+      max-height:70vh;background:#000;border:3px solid #00ff41;border-radius:25px;
+      padding:20px;box-shadow:0 0 80px rgba(0,255,65,0.6);z-index:10;
+      overflow-y:auto;display:flex;flex-direction:column;
+      scroll-behavior: smooth;overscroll-behavior: contain;
     }
     .panel h3{
       font-family:'Orbitron',sans-serif;color:#00ff41;font-size:28px;
@@ -232,6 +234,17 @@ v.supabase.co';
     .leaflet-popup-content b { color: #00ff41 !important; font-size: 18px !important; display: block; margin: 8px 0; }
     .leaflet-popup-content i { font-size: 14px !important; opacity: 0.9; display: block; }
     .leaflet-popup-tip { background: #00ff41 !important; box-shadow: 0 0 20px #00ff41 !important; }
+
+    /* CLICK FEEDBACK */
+    .map-click-pulse {
+      position: absolute; width: 60px; height: 60px; background: rgba(0,255,65,0.4);
+      border-radius: 50%; pointer-events: none; z-index: 999;
+      animation: clickPulse 0.8s ease-out forwards;
+    }
+    @keyframes clickPulse {
+      0% { transform: scale(0); opacity: 1; }
+      100% { transform: scale(4); opacity: 0; }
+    }
   </style>
 </head>
 <body>
@@ -310,17 +323,36 @@ v.supabase.co';
       });
     });
 
+    // CLICK FEEDBACK
+    map.on('click', function(e) {
+      clickedPos = e.latlng;
+
+      // Visual pulse
+      const pulse = document.createElement('div');
+      pulse.className = 'map-click-pulse';
+      pulse.style.left = (e.containerPoint.x - 30) + 'px';
+      pulse.style.top = (e.containerPoint.y - 30) + 'px';
+      document.body.appendChild(pulse);
+      setTimeout(() => pulse.remove(), 800);
+
+      // Open modal
+      const modal = document.getElementById('ritualModal');
+      modal.style.display = 'flex';
+      document.getElementById('avatarPreview').src = 'ritualnet-logo.png';
+      document.getElementById('username').value = '';
+      document.getElementById('pledge').value = '';
+      
+      // Force focus after render
+      setTimeout(() => document.getElementById('username').focus(), 100);
+    });
+
     async function loadAll() {
       const { data, error } = await window.__supabase.from('summonings').select('*').order('timestamp', { ascending: false });
-      if (error) {
-        console.error('Supabase error:', error);
-        return;
-      }
+      if (error) { console.error(error); return; }
 
       localStorage.setItem('ritualnet_summonings', JSON.stringify(data));
       markers.clearLayers(); recent.innerHTML = '';
 
-      // Show all in scrollable list, latest 3 visible by default
       data.forEach(s => {
         const icon = createIcon(s.avatar || 'ritualnet-logo.png');
         const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
@@ -352,15 +384,6 @@ v.supabase.co';
 
     document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
 
-    map.on('click', e => {
-      clickedPos = e.latlng;
-      document.getElementById('ritualModal').style.display = 'flex';
-      document.getElementById('avatarPreview').src = 'ritualnet-logo.png';
-      document.getElementById('username').value = '';
-      document.getElementById('pledge').value = '';
-      setTimeout(() => document.getElementById('username').focus(), 300);
-    });
-
     const closeModal = () => {
       document.getElementById('ritualModal').style.display = 'none';
       clickedPos = null;
@@ -388,11 +411,7 @@ v.supabase.co';
       const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
 
       const { error } = await window.__supabase.from('summonings').insert(newSummon);
-      if (error) {
-        console.error('Insert failed:', error);
-        alert('Failed to join. Check console.');
-        return;
-      }
+      if (error) { console.error(error); alert('Failed to join.'); return; }
 
       closeModal();
       const success = document.getElementById('success');
@@ -415,8 +434,7 @@ v.supabase.co';
     };
 
     document.getElementById('confirmReset').onclick = async () => {
-      const { error } = await window.__supabase.from('summonings').delete().neq('timestamp', 0);
-      if (error) console.error(error);
+      await window.__supabase.from('summonings').delete().neq('timestamp', 0);
       localStorage.removeItem('ritualnet_summonings');
       loadAll();
       document.getElementById('resetConfirm').style.display = 'none';

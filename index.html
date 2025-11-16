@@ -60,7 +60,8 @@
       background: linear-gradient(90deg, #00ff41, #00ff99);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       text-shadow: 0 0 60px #00ff4188; letter-spacing: 8px; cursor: pointer;
-      font-size: clamp(36px, 8vw, 56px); white-space: nowrap; text-align: center;
+      position: relative; font-size: clamp(36px, 8vw, 56px);
+      white-space: nowrap; text-align: center;
     }
     .title-text::before {
       content: 'RITUALNET'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
@@ -84,6 +85,84 @@
       50%{opacity:0.25;transform:translate(-50%,-50%) scale(1.08);}
     }
 
+    /* MODAL */
+    .modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100dvh;
+      background: rgba(0,0,0,0.98); backdrop-filter: blur(20px);
+      display: none; align-items: center; justify-content: center;
+      z-index: 200; padding: 20px; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+    }
+    .card {
+      width: 430px; max-width: 95vw; background: #000; padding: 50px 40px;
+      border: 3px solid #00ff41; border-radius: 30px; text-align: center; position: relative;
+      box-shadow: 0 0 100px rgba(0,255,65,0.7);
+    }
+    .close-btn {
+      position: absolute; top: 20px; right: 25px; width: 40px; height: 40px;
+      background: transparent; border: 2px solid #00ff41; border-radius: 50%;
+      color: #00ff41; font-size: 28px; cursor: pointer;
+    }
+    .close-btn:hover {background: #00ff4111; transform: rotate(90deg);}
+    .card h2 {
+      font-family: 'Orbitron', sans-serif; color: #00ff41; font-size: 42px;
+      text-shadow: 0 0 30px #00ff41; margin-bottom: 40px; letter-spacing: 8px;
+    }
+
+    .avatar-circle {
+      width: 140px; height: 140px; border-radius: 50%; margin: 30px auto;
+      border: 6px solid #00ff41; overflow: hidden; background: #000;
+      box-shadow: 0 0 60px #00ff4188; position: relative;
+    }
+    .avatar-circle img {width: 100%; height: 100%; object-fit: cover; z-index: 2;}
+    .avatar-circle::before {
+      content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      width: 68%; height: 68%; background: url('ritualnet-logo.png') center/contain no-repeat;
+      opacity: 0.18; z-index: 1; pointer-events: none; animation: ritualPulse 6s infinite ease-in-out;
+    }
+
+    .upload-btn, .input-field, .pledge-field {
+      width: 100%; padding: 18px; margin: 18px 0; background: #001100;
+      border: 2px dashed #00ff41; border-radius: 20px; color: #00ff88;
+      font-size: 18px; text-align: center; cursor: pointer; transition: 0.3s;
+    }
+    .upload-btn:hover, .input-field:focus, .pledge-field:focus {
+      background: #002200; border-style: solid; outline: none;
+    }
+    .pledge-field {height: 100px; resize: none; text-align: left; padding: 20px;}
+    .join-btn {
+      margin-top: 30px; padding: 20px 80px; background: #00ff41; color: #000;
+      border: none; border-radius: 50px; font-family: 'Orbitron', sans-serif;
+      font-size: 28px; font-weight: 900; cursor: pointer;
+      box-shadow: 0 0 60px #00ff41; transition: 0.4s;
+    }
+    .join-btn:hover {transform: scale(1.1); box-shadow: 0 0 100px #00ff41;}
+
+    /* SUCCESS */
+    .success {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: #000;
+      display: none; align-items: center; justify-content: center; flex-direction: column;
+      z-index: 300; color: #00ff41; text-align: center; opacity: 0; transition: opacity 0.6s ease;
+      padding: 20px;
+    }
+    .success.active {display: flex; opacity: 1;}
+    .success h1 {
+      font-family: 'Orbitron', sans-serif; font-size: clamp(48px, 12vw, 64px);
+      text-shadow: 0 0 60px #00ff41; margin: 0; z-index: 2;
+      animation: fadeInUp 1.2s ease-out forwards;
+    }
+    .success p {margin-top: 20px; font-size: clamp(16px, 4vw, 20px); opacity: 0; animation: fadeIn 1s ease 0.8s forwards; z-index: 2;}
+    .ritual-circle {
+      position: absolute; width: 300px; height: 300px; border: 3px solid #00ff41;
+      border-radius: 50%; box-shadow: 0 0 80px #00ff41, inset 0 0 60px #00ff41;
+      animation: expandGlow 2.5s ease-out forwards; opacity: 0; z-index: 1;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+    }
+    @keyframes expandGlow {0%{width:0;height:0;opacity:1;}70%{width:400px;height:400px;opacity:0.6;}100%{width:500px;height:500px;opacity:0;}}
+    @keyframes fadeInUp {0%{opacity:0;transform:translateY(30px);}100%{opacity:1;transform:translateY(0);}}
+    @keyframes fadeIn {to{opacity:0.8;}}
+
     /* PANEL — SCROLL TOP → BOTTOM */
     .panel {
       position: fixed;
@@ -97,7 +176,7 @@
       box-shadow: 0 0 60px rgba(0,255,65,0.6);
       z-index: 10;
       overflow-y: auto;
-      display: flex; flex-direction: column; /* Normal: top → bottom */
+      display: flex; flex-direction: column; /* TOP → BOTTOM */
       scroll-behavior: smooth;
       overscroll-behavior: contain;
       padding-bottom: env(safe-area-inset-bottom);
@@ -114,9 +193,9 @@
       border-radius: 15px; position: relative; flex-shrink: 0;
       scroll-snap-align: start;
       cursor: pointer;
-      transition: 0.2s;
+      transition: background 0.2s;
     }
-    .entry:active {background: rgba(255,0,0,0.2); transform: scale(0.98);}
+    .entry:active {background: rgba(255,0,0,0.2);}
     .entry img {
       width: 36px; height: 36px; border-radius: 50%; border: 2px solid #00ff41;
       margin-right: 10px; box-shadow: 0 0 20px #00ff4188; z-index: 2;
@@ -129,11 +208,13 @@
     .entry .name {color: #00ff88; font-weight: bold; font-family: 'Orbitron', sans-serif; font-size: 14px; flex: 1;}
     .entry .pledge {color: #00ff88; font-size: 12px; margin-top: 2px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 
-    /* ADMIN DELETE CONFIRM */
+    /* DELETE CONFIRM */
     #deleteConfirm {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: rgba(0,0,0,0.98);
-      backdrop-filter: blur(20px); display: none; align-items: center; justify-content: center;
-      flex-direction: column; z-index: 500; color: #ff0044; text-align: center; font-family: 'Orbitron', sans-serif;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100dvh;
+      background: rgba(0,0,0,0.98); backdrop-filter: blur(20px);
+      display: none; align-items: center; justify-content: center;
+      flex-direction: column; z-index: 500; color: #ff0044; text-align: center;
+      font-family: 'Orbitron', sans-serif;
     }
     #deleteConfirm button {
       margin: 15px; font-size: 22px; padding: 14px 50px; border-radius: 40px;
@@ -142,11 +223,21 @@
     #confirmDelete {background: #ff0044; color: #fff; box-shadow: 0 0 60px #ff0044;}
     #cancelDelete {background: #333; color: #00ff41; border: 2px solid #00ff41;}
 
-    /* MODAL & SUCCESS */
-    .modal { /* same as before */ }
-    .success { /* same as before */ }
+    /* RESET CONFIRM */
+    #resetConfirm {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100dvh;
+      background: rgba(0,0,0,0.98); backdrop-filter: blur(20px);
+      display: none; align-items: center; justify-content: center;
+      flex-direction: column; z-index: 400; color: #00ff41; text-align: center;
+      font-family: 'Orbitron', sans-serif;
+    }
+    #resetConfirm button {
+      margin: 15px; font-size: 22px; padding: 14px 50px; border-radius: 40px;
+      font-family: 'Orbitron', sans-serif; font-weight: 900; cursor: pointer;
+    }
+    #confirmReset {background: #00ff41; color: #000; box-shadow: 0 0 60px #00ff41;}
+    #cancelReset {background: #333; color: #00ff41; border: 2px solid #00ff41;}
 
-    /* OTHER STYLES (popup, markers, etc.) — unchanged */
     .leaflet-popup-content-wrapper {background: #000 !important; color: #0f0 !important; border: 3px solid #00ff41 !important; border-radius: 20px !important; padding: 0 !important; box-shadow: 0 0 40px rgba(0,255,65,0.6) !important;}
     .leaflet-popup-content {margin: 0 !important; padding: 12px !important; text-align: center !important; font-family: 'Orbitron', sans-serif !important; position: relative;}
     .leaflet-popup-content img {width: 70px !important; height: 70px !important; border-radius: 50% !important; border: 3px solid #00ff41 !important; margin-bottom: 10px !important; box-shadow: 0 0 20px #00ff41 !important; z-index: 2;}
@@ -154,6 +245,13 @@
     .leaflet-popup-content b {color: #00ff41 !important; font-size: 16px !important; display: block; margin: 6px 0;}
     .leaflet-popup-content i {font-size: 13px !important; opacity: 0.9; display: block;}
     .leaflet-popup-tip {background: #00ff41 !important; box-shadow: 0 0 20px #00ff41 !important;}
+
+    .map-click-pulse {
+      position: absolute; width: 60px; height: 60px; background: rgba(0,255,65,0.4);
+      border-radius: 50%; pointer-events: none; z-index: 999;
+      animation: clickPulse 0.8s ease-out forwards;
+    }
+    @keyframes clickPulse {0% {transform: scale(0); opacity: 1;}100% {transform: scale(4); opacity: 0;}}
   </style>
 </head>
 <body>
@@ -167,20 +265,36 @@
 
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
-  <!-- PANEL: TOP → BOTTOM SCROLL -->
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent"></div>
   </div>
 
-  <!-- MODAL & SUCCESS (unchanged) -->
-  <div class="modal" id="ritualModal">...</div>
-  <div class="success" id="success">...</div>
+  <div class="modal" id="ritualModal">
+    <div class="card">
+      <div class="close-btn" id="closeBtn">X</div>
+      <h2>PERFORM THE RITUAL</h2>
+      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview"></div>
+      <label class="upload-btn">UPLOAD AVATAR</label>
+      <input type="file" id="avatarInput" accept="image/*" style="display:none;">
+      <input type="text" class="input-field" id="username" placeholder="X / Twitter username">
+      <textarea class="pledge-field input-field" id="pledge" placeholder="Write your pledge..."></textarea>
+      <button class="join-btn">JOIN THE CIRCLE</button>
+    </div>
+  </div>
 
-  <!-- RESET ALL -->
-  <div id="resetConfirm">...</div>
+  <div class="success" id="success">
+    <div class="ritual-circle"></div>
+    <h1>YOU ARE RITUALIZED</h1>
+    <p>The circle grows stronger.</p>
+  </div>
 
-  <!-- DELETE SINGLE -->
+  <div id="resetConfirm">
+    <div>RESET THE CIRCLE?</div>
+    <button id="confirmReset">BURN IT ALL</button>
+    <button id="cancelReset">CANCEL</button>
+  </div>
+
   <div id="deleteConfirm">
     <div>BURN THIS RITUAL?</div>
     <div id="deleteTarget"></div>
@@ -199,10 +313,30 @@
     let clickTimer = null;
     let deleteTarget = null;
 
-    function getSize() { /* same */ }
-    function createIcon(src) { /* same */ }
+    function getSize() {
+      const z = map.getZoom();
+      if (z <= 3) return 30;
+      if (z <= 5) return 40;
+      if (z <= 7) return 50;
+      return 65;
+    }
 
-    map.on('zoomend', () => { /* same */ });
+    function createIcon(src) {
+      const s = getSize();
+      return L.divIcon({
+        className: 'ritual-marker',
+        html: `<img src="${src}" style="width:${s}px;height:${s}px;">`,
+        iconSize: [s, s],
+        iconAnchor: [s/2, s/2]
+      });
+    }
+
+    map.on('zoomend', () => {
+      markers.eachLayer(m => {
+        const data = m.options.data;
+        if (data?.avatar) m.setIcon(createIcon(data.avatar));
+      });
+    });
 
     function addSummoningToUI(s) {
       const icon = createIcon(s.avatar || 'ritualnet-logo.png');
@@ -212,22 +346,28 @@
       const entry = document.createElement('div');
       entry.className = 'entry';
       entry.dataset.id = s.id;
-      entry.innerHTML = `<img src="${s.avatar || 'ritualnet-logo.png'}"><div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>`;
+      entry.innerHTML = `
+        <img src="${s.avatar || 'ritualnet-logo.png'}">
+        <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
+      `;
 
       // LONG PRESS TO DELETE
       let pressTimer;
-      entry.addEventListener('mousedown', () => pressTimer = setTimeout(() => showDeleteConfirm(s, entry), 800));
-      entry.addEventListener('mouseup', () => clearTimeout(pressTimer));
-      entry.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-      entry.addEventListener('touchstart', (e) => { e.preventDefault(); pressTimer = setTimeout(() => showDeleteConfirm(s, entry), 800); });
-      entry.addEventListener('touchend', () => clearTimeout(pressTimer));
+      const startPress = () => pressTimer = setTimeout(() => showDeleteConfirm(s, entry, m), 800);
+      const cancelPress = () => clearTimeout(pressTimer);
 
-      recent.prepend(entry); // Newest at top
+      entry.addEventListener('mousedown', startPress);
+      entry.addEventListener('mouseup', cancelPress);
+      entry.addEventListener('mouseleave', cancelPress);
+      entry.addEventListener('touchstart', (e) => { e.preventDefault(); startPress(); });
+      entry.addEventListener('touchend', cancelPress);
+      entry.addEventListener('touchcancel', cancelPress);
+
+      recent.prepend(entry); // Latest at top
     }
 
-    function showDeleteConfirm(s, entry) {
-      deleteTarget = { id: s.id, entry, marker: null };
-      markers.eachLayer(m => { if (m.options.data?.id === s.id) deleteTarget.marker = m; });
+    function showDeleteConfirm(s, entry, marker) {
+      deleteTarget = { id: s.id, entry, marker };
       document.getElementById('deleteTarget').textContent = `@${s.name}`;
       document.getElementById('deleteConfirm').style.display = 'flex';
     }
@@ -242,18 +382,71 @@
 
     loadAll();
 
-    // REAL-TIME
     window.__supabase.channel('summonings-channel')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, payload => addSummoningToUI(payload.new))
       .subscribe();
 
-    // MODAL LOGIC (unchanged)
-    map.on('click', /* ... same ... */);
+    map.on('click', function(e) {
+      clickedPos = e.latlng;
+      const pulse = document.createElement('div');
+      pulse.className = 'map-click-pulse';
+      pulse.style.left = (e.containerPoint.x - 30) + 'px';
+      pulse.style.top = (e.containerPoint.y - 30) + 'px';
+      document.body.appendChild(pulse);
+      setTimeout(() => pulse.remove(), 800);
 
-    // 7-CLICK RESET — SERVER DELETE
+      const modal = document.getElementById('ritualModal');
+      modal.style.display = 'flex';
+      document.getElementById('avatarPreview').src = 'ritualnet-logo.png';
+      document.getElementById('username').value = '';
+      document.getElementById('pledge').value = '';
+      setTimeout(() => document.getElementById('username').focus(), 100);
+    });
+
+    document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
+
+    const closeModal = () => {
+      document.getElementById('ritualModal').style.display = 'none';
+      clickedPos = null;
+    };
+    document.getElementById('closeBtn').onclick = closeModal;
+    document.querySelector('.modal').onclick = e => { if (e.target.classList.contains('modal')) closeModal(); };
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    document.querySelector('.upload-btn').onclick = () => document.getElementById('avatarInput').click();
+    document.getElementById('avatarInput').onchange = e => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = ev => document.getElementById('avatarPreview').src = ev.target.result;
+        reader.readAsDataURL(file);
+      }
+    };
+
+    document.querySelector('.join-btn').onclick = async () => {
+      const avatar = document.getElementById('avatarPreview').src;
+      const name = document.getElementById('username').value.trim() || "ritualist";
+      const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
+      if (!clickedPos) return;
+
+      const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
+      const { data, error } = await window.__supabase.from('summonings').insert(newSummon).select();
+      if (error) { console.error(error); alert('Failed to join.'); return; }
+
+      closeModal();
+      const success = document.getElementById('success');
+      success.classList.add('active');
+      setTimeout(() => {
+        success.classList.remove('active');
+        map.flyTo(clickedPos, 10, { duration: 1.8 });
+      }, 3200);
+      addSummoningToUI(data[0]);
+    };
+
+    // 7-CLICK RESET
     document.getElementById('ritualLogo').onclick = () => {
       logoClicks++;
-      if (clickTimer) clearTimeout(clickTimer);
+      if (clickTimer) clearTimeout(clickTimerotik);
       if (logoClicks === 7) {
         document.getElementById('resetConfirm').style.display = 'flex';
         logoClicks = 0;
@@ -266,6 +459,10 @@
       await window.__supabase.from('summonings').delete().gt('id', 0);
       localStorage.removeItem('ritualnet_summonings');
       markers.clearLayers(); recent.innerHTML = '';
+      document.getElementById('resetConfirm').style.display = 'none';
+    };
+
+    document.getElementById('cancelReset').onclick = () => {
       document.getElementById('resetConfirm').style.display = 'none';
     };
 

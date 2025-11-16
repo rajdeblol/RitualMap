@@ -77,7 +77,7 @@
       50%{opacity:0.25;transform:translate(-50%,-50%) scale(1.08);}
     }
 
-    /* MODAL — FIXED FOR MOBILE */
+    /* MODAL */
     .modal{
       position:fixed;top:0;left:0;width:100%;height:100dvh;
       background:rgba(0,0,0,0.98);backdrop-filter:blur(20px);
@@ -235,7 +235,7 @@
     .leaflet-popup-content i { font-size: 14px !important; opacity: 0.9; display: block; }
     .leaflet-popup-tip { background: #00ff41 !important; box-shadow: 0 0 20px #00ff41 !important; }
 
-    /* CLICK FEEDBACK */
+    /* CLICK PULSE */
     .map-click-pulse {
       position: absolute; width: 60px; height: 60px; background: rgba(0,255,65,0.4);
       border-radius: 50%; pointer-events: none; z-index: 999;
@@ -289,7 +289,14 @@
   </div>
 
   <script>
-    const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([10, 0], 2);
+    // MAP: NO ZOOM OUT BEYOND WORLD VIEW
+    const map = L.map('map', { 
+      zoomControl: false, 
+      attributionControl: false,
+      minZoom: 2,           // ← PREVENT WHITE SPACE
+      maxZoom: 19
+    }).setView([10, 0], 2);
+
     L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
     const markers = L.layerGroup().addTo(map);
@@ -323,11 +330,10 @@
       });
     });
 
-    // CLICK FEEDBACK
+    // CLICK → PULSE + MODAL
     map.on('click', function(e) {
       clickedPos = e.latlng;
 
-      // Visual pulse
       const pulse = document.createElement('div');
       pulse.className = 'map-click-pulse';
       pulse.style.left = (e.containerPoint.x - 30) + 'px';
@@ -335,16 +341,35 @@
       document.body.appendChild(pulse);
       setTimeout(() => pulse.remove(), 800);
 
-      // Open modal
       const modal = document.getElementById('ritualModal');
       modal.style.display = 'flex';
       document.getElementById('avatarPreview').src = 'ritualnet-logo.png';
       document.getElementById('username').value = '';
       document.getElementById('pledge').value = '';
-      
-      // Force focus after render
       setTimeout(() => document.getElementById('username').focus(), 100);
     });
+
+    // ADD MARKER & PANEL ENTRY INSTANTLY
+    function addSummoningToUI(s) {
+      const icon = createIcon(s.avatar || 'ritualnet-logo.png');
+      const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
+
+      m.bindPopup(`
+        <div style="position:relative;text-align:center;">
+          <img src="${s.avatar || 'ritualnet-logo.png'}">
+          <b>@${s.name}</b>
+          <i>"${s.pledge}"</i>
+        </div>
+      `);
+
+      const entry = document.createElement('div');
+      entry.className = 'entry';
+      entry.innerHTML = `
+        <img src="${s.avatar || 'ritualnet-logo.png'}">
+        <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
+      `;
+      recent.prepend(entry); // NEWEST ON TOP
+    }
 
     async function loadAll() {
       const { data, error } = await window.__supabase.from('summonings').select('*').order('timestamp', { ascending: false });
@@ -353,33 +378,17 @@
       localStorage.setItem('ritualnet_summonings', JSON.stringify(data));
       markers.clearLayers(); recent.innerHTML = '';
 
-      data.forEach(s => {
-        const icon = createIcon(s.avatar || 'ritualnet-logo.png');
-        const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
-
-        m.bindPopup(`
-          <div style="position:relative;text-align:center;">
-            <img src="${s.avatar || 'ritualnet-logo.png'}">
-            <b>@${s.name}</b>
-            <i>"${s.pledge}"</i>
-          </div>
-        `);
-
-        const entry = document.createElement('div');
-        entry.className = 'entry';
-        entry.innerHTML = `
-          <img src="${s.avatar || 'ritualnet-logo.png'}">
-          <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
-        `;
-        recent.appendChild(entry);
-      });
+      data.forEach(s => addSummoningToUI(s));
     }
 
     loadAll();
 
+    // REALTIME: NEW SUMMONING → INSTANT UI UPDATE
     window.__supabase
       .channel('summonings-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'summonings' }, () => loadAll())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, payload => {
+        addSummoningToUI(payload.new);
+      })
       .subscribe();
 
     document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
@@ -402,6 +411,7 @@
       }
     };
 
+    // JOIN → INSERT + INSTANT MARKER
     document.querySelector('.join-btn').onclick = async () => {
       const avatar = document.getElementById('avatarPreview').src;
       const name = document.getElementById('username').value.trim() || "ritualist";
@@ -410,7 +420,7 @@
 
       const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
 
-      const { error } = await window.__supabase.from('summonings').insert(newSummon);
+      const { data, error } = await window.__supabase.from('summonings').insert(newSummon).select();
       if (error) { console.error(error); alert('Failed to join.'); return; }
 
       closeModal();
@@ -420,6 +430,9 @@
         success.classList.remove('active');
         map.flyTo(clickedPos, 10, { duration: 1.8 });
       }, 3200);
+
+      // INSTANTLY ADD TO UI
+      addSummoningToUI(data[0]);
     };
 
     document.getElementById('ritualLogo').onclick = () => {

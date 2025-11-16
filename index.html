@@ -138,6 +138,7 @@
       box-shadow: 0 0 60px #00ff41; transition: 0.4s;
     }
     .join-btn:hover {transform: scale(1.1); box-shadow: 0 0 100px #00ff41;}
+    .join-btn:disabled {opacity: 0.5; cursor: not-allowed;}
 
     /* SUCCESS */
     .success {
@@ -177,7 +178,7 @@
       z-index: 10;
       overflow-y: auto;
       display: flex;
-      flex-direction: column; /* ← NORMAL: TOP → BOTTOM */
+      flex-direction: column;
       scroll-behavior: smooth;
       overscroll-behavior: contain;
       padding-bottom: env(safe-area-inset-bottom);
@@ -289,7 +290,7 @@
       <input type="file" id="avatarInput" accept="image/*" style="display:none;">
       <input type="text" class="input-field" id="username" placeholder="X / Twitter username">
       <textarea class="pledge-field input-field" id="pledge" placeholder="Write your pledge..."></textarea>
-      <button class="join-btn">JOIN THE CIRCLE</button>
+      <button class="join-btn" id="joinBtn">JOIN THE CIRCLE</button>
     </div>
   </div>
 
@@ -364,7 +365,7 @@
         <img src="${s.avatar || 'ritualnet-logo.png'}">
         <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
       `;
-      recent.prepend(entry); // Newest at top
+      recent.prepend(entry);
     }
 
     async function loadAll() {
@@ -372,12 +373,11 @@
       if (error) { console.error(error); return; }
 
       markers.clearLayers(); recent.innerHTML = '';
-
       data.forEach(s => addSummoningToUI(s));
     }
 
     loadAll();
-    setInterval(loadAll, 3000); // ← ONLY ADDED THIS LINE
+    setInterval(loadAll, 3000);
 
     window.__supabase
       .channel('summonings-channel')
@@ -424,16 +424,60 @@
       }
     };
 
+    // JOIN BUTTON — UPLOAD AVATAR + INSERT URL
     document.querySelector('.join-btn').onclick = async () => {
-      const avatar = document.getElementById('avatarPreview').src;
+      const joinBtn = document.getElementById('joinBtn');
+      joinBtn.disabled = true;
+      joinBtn.textContent = 'SUMMONING...';
+
+      const previewSrc = document.getElementById('avatarPreview').src;
       const name = document.getElementById('username').value.trim() || "ritualist";
       const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
-      if (!clickedPos) return;
+      if (!clickedPos) { joinBtn.disabled = false; joinBtn.textContent = 'JOIN THE CIRCLE'; return; }
 
-      const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
+      let avatarUrl = 'ritualnet-logo.png';
 
-      const { data, error } = await window.__supabase.from('summonings').insert(newSummon).select();
-      if (error) { console.error(error); alert('Failed to join.'); return; }
+      // UPLOAD IF NOT DEFAULT
+      if (previewSrc && !previewSrc.includes('ritualnet-logo.png')) {
+        try {
+          const response = await fetch(previewSrc);
+          const blob = await response.blob();
+          const fileName = `avatar_${Date.now()}.png`;
+          const { error } = await window.__supabase.storage
+            .from('avatars')
+            .upload(fileName, blob, { upsert: true });
+
+          if (error) throw error;
+
+          const { data: { publicUrl } } = window.__supabase.storage
+            .from('avatars')
+            .getPublicUrl(fileName);
+
+          avatarUrl = publicUrl;
+        } catch (err) {
+          console.error('Upload failed:', err);
+          alert('Avatar failed. Using default.');
+          avatarUrl = 'ritualnet-logo.png';
+        }
+      }
+
+      const newSummon = { 
+        name, 
+        pledge, 
+        avatar: avatarUrl, 
+        lat: clickedPos.lat, 
+        lng: clickedPos.lng, 
+        timestamp: Date.now() 
+      };
+
+      const { error } = await window.__supabase.from('summonings').insert(newSummon);
+      if (error) {
+        console.error('Insert failed:', error);
+        alert('Failed to join. Try again.');
+        joinBtn.disabled = false;
+        joinBtn.textContent = 'JOIN THE CIRCLE';
+        return;
+      }
 
       closeModal();
       const success = document.getElementById('success');
@@ -443,7 +487,8 @@
         map.flyTo(clickedPos, 10, { duration: 1.8 });
       }, 3200);
 
-      // REMOVED: addSummoningToUI(data[0]); ← Real-time handles it
+      joinBtn.disabled = false;
+      joinBtn.textContent = 'JOIN THE CIRCLE';
     };
 
     // 7-CLICK RESET

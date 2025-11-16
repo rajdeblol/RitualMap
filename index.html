@@ -120,7 +120,7 @@
       font-size: 18px; text-align: center; cursor: pointer; transition: 0.3s;
     }
     .upload-btn:hover, .input-field:focus, .pledge-field:focus {
-      background: #002200; border-style: solid; outline: none;
+      background: # P002200; border-style: solid; outline: none;
     }
     .pledge-field {height: 100px; resize: none; text-align: left; padding: 20px;}
     .join-btn {
@@ -363,15 +363,108 @@
         });
       });
 
+      // find marker by id or very-close lat/lng (tolerance) - returns marker or null
+      function findExistingMarker(s) {
+        if (!s) return null;
+        let found = null;
+        markers.eachLayer(m => {
+          if (found) return;
+          const md = m.options.data || {};
+          if (s.id && md.id && String(md.id) === String(s.id)) {
+            found = m; return;
+          }
+          // fallback: coordinates close match (within ~20 meters ~ 0.0002 degrees)
+          if (s.lat != null && s.lng != null && md.lat != null && md.lng != null) {
+            const dLat = Math.abs(Number(md.lat) - Number(s.lat));
+            const dLng = Math.abs(Number(md.lng) - Number(s.lng));
+            if (dLat < 0.0004 && dLng < 0.0004) { found = m; return; }
+          }
+        });
+        return found;
+      }
+
+      // update marker's avatar + popup + recent-list image instantly
+      function updateMarkerAvatar(marker, newAvatar) {
+        try {
+          if (!marker) return;
+          // update data
+          marker.options.data = marker.options.data || {};
+          marker.options.data.avatar = newAvatar;
+
+          // update icon
+          marker.setIcon(createIcon(newAvatar));
+
+          // update popup image if open or present
+          try {
+            const popupEl = marker.getPopup ? marker.getPopup() : null;
+            if (popupEl && popupEl._contentNode) {
+              const img = popupEl._contentNode.querySelector('img');
+              if (img) img.src = newAvatar;
+            }
+          } catch (e) { /* ignore */ }
+
+          // update the recent list image (if entry exists)
+          try {
+            const id = marker.options.data && marker.options.data.id;
+            if (id) {
+              const entry = document.querySelector(`.entry[data-id="${id}"]`);
+              if (entry) {
+                const img = entry.querySelector('img');
+                if (img) img.src = newAvatar;
+              }
+            } else {
+              // fallback: try matching by lat/lng for entries without id
+              const children = Array.from(recent.children);
+              for (const entry of children) {
+                const img = entry.querySelector('img');
+                if (!img || !entry.dataset || entry.dataset.id) continue;
+                // can't match easily without id; skip
+              }
+            }
+          } catch (e) { /* ignore */ }
+        } catch (e) { console.warn('updateMarkerAvatar failed', e); }
+      }
+
       function addSummoningToUI(s, isLocal = false, options = {}) {
         if (!s) return;
         if (!s.id && !s.timestamp) {
           // allow temp entries without id, but ensure coords exist
           if (!s.lat || !s.lng) return;
         }
+
+        // if a marker for this summoning already exists, update its avatar instantly
+        const existing = findExistingMarker(s);
+        if (existing) {
+          if (s.avatar) {
+            updateMarkerAvatar(existing, s.avatar);
+          }
+          // also update name/pledge in popup and entry if needed
+          try {
+            existing.options.data = Object.assign({}, existing.options.data || {}, s);
+            const id = existing.options.data && existing.options.data.id;
+            if (id) {
+              const entry = document.querySelector(`.entry[data-id="${id}"]`);
+              if (entry) {
+                const nameEl = entry.querySelector('.name');
+                const pledgeEl = entry.querySelector('.pledge');
+                if (nameEl) nameEl.textContent = '@' + (s.name || existing.options.data.name || 'ritualist');
+                if (pledgeEl) pledgeEl.textContent = '"' + (s.pledge || existing.options.data.pledge || '') + '"';
+              }
+            }
+            // update popup contents
+            try {
+              if (existing.getPopup && existing.getPopup()) {
+                existing.setPopupContent(`<div style="position:relative;text-align:center;"><img src="${s.avatar || existing.options.data.avatar || 'ritualnet-logo.png'}"><b>@${s.name}</b><i>"${s.pledge}"</i></div>`);
+              }
+            } catch(e){}
+          } catch(e){}
+          return;
+        }
+
         // prevent duplicates by id (if id present)
         if (s.id && document.querySelector(`[data-id="${s.id}"]`)) return;
 
+        // add new marker as before
         const icon = createIcon(s.avatar || 'ritualnet-logo.png');
         const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
 
@@ -433,8 +526,7 @@
             console.warn('[RITUALNET] localStorage save failed', e);
           }
 
-          // redraw UI with fresh data (newest first -> prepend would put newest at top,
-          // but data is already ordered newest->oldest, so append in order keeps newest at top if we clear first)
+          // redraw UI with fresh data
           markers.clearLayers(); recent.innerHTML = '';
           data.forEach(s => addSummoningToUI(s, false, { toTop: false }));
 
@@ -473,15 +565,52 @@
           // postgres INSERT events
           ritualChannel
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, payload => {
-              addSummoningToUI(payload.new, false, { toTop: true });
+              const row = payload.new || payload.record || payload;
+              // try to update existing marker instantly, otherwise add
+              const existing = findExistingMarker(row);
+              if (existing) {
+                if (row.avatar) updateMarkerAvatar(existing, row.avatar);
+                // update content as well
+                existing.options.data = Object.assign({}, existing.options.data || {}, row);
+                try { existing.setPopupContent(`<div style="position:relative;text-align:center;"><img src="${row.avatar || existing.options.data.avatar || 'ritualnet-logo.png'}"><b>@${row.name}</b><i>"${row.pledge}"</i></div>`); } catch(e){}
+                // update recent list entry
+                if (row.id) {
+                  const entry = document.querySelector(`.entry[data-id="${row.id}"]`);
+                  if (entry) {
+                    const img = entry.querySelector('img'); if (img) img.src = row.avatar || img.src;
+                    const nameEl = entry.querySelector('.name'); if (nameEl) nameEl.textContent = '@' + row.name;
+                    const pledgeEl = entry.querySelector('.pledge'); if (pledgeEl) pledgeEl.textContent = '"' + row.pledge + '"';
+                  }
+                }
+              } else {
+                addSummoningToUI(row, false, { toTop: true });
+              }
             });
 
           // broadcast listener (fast path)
           ritualChannel
             .on('broadcast', { event: 'new_summon' }, payload => {
-              if (payload && typeof payload === 'object') {
-                addSummoningToUI(payload, false, { toTop: true });
-              }
+              try {
+                if (!payload) return;
+                const row = payload;
+                // if existing marker exists (maybe placeholder), update avatar immediately
+                const existing = findExistingMarker(row);
+                if (existing) {
+                  if (row.avatar) updateMarkerAvatar(existing, row.avatar);
+                  existing.options.data = Object.assign({}, existing.options.data || {}, row);
+                  try { existing.setPopupContent(`<div style="position:relative;text-align:center;"><img src="${row.avatar || existing.options.data.avatar || 'ritualnet-logo.png'}"><b>@${row.name}</b><i>"${row.pledge}"</i></div>`); } catch(e){}
+                  if (row.id) {
+                    const entry = document.querySelector(`.entry[data-id="${row.id}"]`);
+                    if (entry) {
+                      const img = entry.querySelector('img'); if (img) img.src = row.avatar || img.src;
+                      const nameEl = entry.querySelector('.name'); if (nameEl) nameEl.textContent = '@' + row.name;
+                      const pledgeEl = entry.querySelector('.pledge'); if (pledgeEl) pledgeEl.textContent = '"' + row.pledge + '"';
+                    }
+                  }
+                } else {
+                  addSummoningToUI(row, false, { toTop: true });
+                }
+              } catch (e) { console.warn('broadcast handler error', e); }
             });
 
           ritualChannel.subscribe(status => {
@@ -608,35 +737,9 @@
 
         const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
 
-        // Add locally *immediately* for instant feedback
-        const tempId = `tmp-${Date.now()}-${Math.random()}`;
-        const tempRow = { ...newSummon, id: tempId };
-        addSummoningToUI(tempRow, true, { toTop: true });
-
-        // Insert into DB (fire-and-forget for speed; realtime will confirm)
-        window.__supabase.from('summonings').insert(newSummon).select().then(({ data, error }) => {
-          if (error) {
-            console.error(error);
-            // Remove temp if failed
-            const tempEntry = document.querySelector(`[data-id="${tempId}"]`);
-            if (tempEntry) tempEntry.remove();
-            markers.eachLayer(m => { if (m.options.data?.id === tempId) m.remove(); });
-            alert('Failed to join.');
-            return;
-          }
-          const row = data[0];
-          // Replace temp marker/entry with real one (if different)
-          const existingEntry = document.querySelector(`[data-id="${tempId}"]`);
-          if (existingEntry) {
-            existingEntry.dataset.id = row.id;
-          }
-          markers.eachLayer(m => {
-            if (m.options.data?.id === tempId) {
-              m.options.data = row;
-              m.setIcon(createIcon(row.avatar || 'ritualnet-logo.png'));
-            }
-          });
-        }).catch(() => {});
+        // Insert into DB
+        const { data, error } = await window.__supabase.from('summonings').insert(newSummon).select();
+        if (error) { console.error(error); alert('Failed to join.'); return; }
 
         // Close modal + show success
         closeModal();
@@ -647,8 +750,12 @@
           map.flyTo(clickedPos, 10, { duration: 1.8 });
         }, 3200);
 
-        // Broadcast for instant delivery to others (fire-and-forget)
-        sendBroadcast(tempRow);
+        // Add locally immediately (newest at top)
+        const row = (data && data[0]) ? data[0] : { ...newSummon, id: `tmp-${Date.now()}` };
+        addSummoningToUI(row, true, { toTop: true });
+
+        // Broadcast for instant delivery to others
+        sendBroadcast(row);
       };
 
       document.getElementById('ritualLogo').onclick = () => {
@@ -674,7 +781,7 @@
       };
 
       // expose for quick debugging
-      window.__ritual = { map, markers, loadAll, connectRealtime };
+      window.__ritual = { map, markers, loadAll, connectRealtime, findExistingMarker };
       console.log('[RITUALNET] initialized. Open DevTools Console to see realtime / polling logs.');
     }); // end load
   </script>

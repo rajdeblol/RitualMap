@@ -24,6 +24,19 @@
     #map {
       position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; z-index: 1;
     }
+
+    /* DISABLE ALL MAP POINTER EVENTS EXCEPT LEAFLET CLICK */
+    .leaflet-container {
+      pointer-events: none !important;
+      cursor: default !important;
+    }
+    .leaflet-map-pane,
+    .leaflet-tile-pane,
+    .leaflet-marker-pane,
+    .leaflet-popup-pane {
+      pointer-events: auto !important;
+    }
+
     .leaflet-control-zoom, .leaflet-control-attribution {display: none !important;}
 
     /* TITLE BAR — RESPONSIVE TEXT */
@@ -33,6 +46,7 @@
       display: flex; align-items: center; justify-content: center; gap: 15px;
       z-index: 100; user-select: none; padding-top: env(safe-area-inset-top);
       flex-wrap: wrap; padding: 10px;
+      pointer-events: auto;
     }
     #ritualLogo {
       width: 70px; height: 70px; cursor: pointer;
@@ -52,7 +66,7 @@
       background: linear-gradient(90deg, #00ff41, #00ff99);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       text-shadow: 0 0 60px #00ff4188; letter-spacing: 8px; cursor: pointer;
-      position: relative; font-size: clamp(36px, 8vw, 56px); /* Responsive */
+      position: relative; font-size: clamp(36px, 8vw, 56px);
       white-space: nowrap; text-align: center;
     }
     .title-text::before {
@@ -68,7 +82,7 @@
       left: 50%; transform: translateX(-50%);
       font-size: 14px; letter-spacing: 2px; color: #00ff88;
       text-shadow: 0 0 20px #00ff41; font-family: 'Orbitron', sans-serif;
-      white-space: nowrap; z-index: 100;
+      white-space: nowrap; z-index: 100; pointer-events: auto;
     }
 
     @keyframes glow {0%{filter: drop-shadow(0 0 30px #00ff41);}100%{filter: drop-shadow(0 0 70px #00ff41);}}
@@ -85,6 +99,7 @@
       z-index: 200; padding: 20px; overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+      pointer-events: auto;
     }
     .card {
       width: 430px; max-width: 95vw; background: #000; padding: 50px 40px;
@@ -136,7 +151,7 @@
       position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: #000;
       display: none; align-items: center; justify-content: center; flex-direction: column;
       z-index: 300; color: #00ff41; text-align: center; opacity: 0;
-      transition: opacity 0.6s ease; padding: 20px;
+      transition: opacity 0.6s ease; padding: 20px; pointer-events: auto;
     }
     .success.active {
       display: flex; opacity: 1;
@@ -185,6 +200,9 @@
       scroll-behavior: smooth;
       overscroll-behavior: contain;
       padding-bottom: env(safe-area-inset-bottom);
+      pointer-events: auto;
+      touch-action: pan-y;
+      -webkit-overflow-scrolling: touch;
     }
     .panel h3 {
       font-family: 'Orbitron', sans-serif; color: #00ff41; font-size: 18px;
@@ -229,6 +247,7 @@
       position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: rgba(0,0,0,0.98);
       backdrop-filter: blur(20px); display: none; align-items: center; justify-content: center;
       flex-direction: column; z-index: 400; color: #00ff41; text-align: center; font-family: 'Orbitron', sans-serif;
+      pointer-events: auto;
     }
     #resetConfirm button {
       margin: 15px; font-size: 22px; padding: 14px 50px; border-radius: 40px;
@@ -310,21 +329,28 @@
   </div>
 
   <script>
-    // --- Supabase init (same keys you used) ---
+    // --- Supabase init ---
     const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpgv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndHRmaXFld253cHFndWhicGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTY1ODgsImV4cCI6MjA3ODc3MjU4OH0.zVK46pTGH0_Ruu20s35ep8NnsQd2ROenG_EuWezXiWg';
     const { createClient } = window.supabase;
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     window.__supabase = supabase;
 
-    // wait for load to reduce layout/leaflet sizing issues
+    // wait for load
     window.addEventListener('load', () => {
-      // --- Map init (same as your first file) ---
+      // --- Map init: FULLY LOCKED EXCEPT CLICK ---
       const map = L.map('map', { 
         zoomControl: false, 
         attributionControl: false,
         minZoom: 2,
-        maxZoom: 19
+        maxZoom: 19,
+        dragging: false,
+        touchZoom: false,
+        doubleClickZoom: false,
+        scrollWheelZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        tap: false
       }).setView([10, 0], 2);
 
       L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -363,7 +389,6 @@
         });
       });
 
-      // find marker by id or very-close lat/lng (tolerance) - returns marker or null
       function findExistingMarker(s) {
         if (!s) return null;
         let found = null;
@@ -373,7 +398,6 @@
           if (s.id && md.id && String(md.id) === String(s.id)) {
             found = m; return;
           }
-          // fallback: coordinates close match (within ~20 meters ~ 0.0002 degrees)
           if (s.lat != null && s.lng != null && md.lat != null && md.lng != null) {
             const dLat = Math.abs(Number(md.lat) - Number(s.lat));
             const dLng = Math.abs(Number(md.lng) - Number(s.lng));
@@ -383,27 +407,19 @@
         return found;
       }
 
-      // update marker's avatar + popup + recent-list image instantly
       function updateMarkerAvatar(marker, newAvatar) {
         try {
           if (!marker) return;
-          // update data
           marker.options.data = marker.options.data || {};
           marker.options.data.avatar = newAvatar;
-
-          // update icon
           marker.setIcon(createIcon(newAvatar));
-
-          // update popup image if open or present
           try {
             const popupEl = marker.getPopup ? marker.getPopup() : null;
             if (popupEl && popupEl._contentNode) {
               const img = popupEl._contentNode.querySelector('img');
               if (img) img.src = newAvatar;
             }
-          } catch (e) { /* ignore */ }
-
-          // update the recent list image (if entry exists)
+          } catch (e) {}
           try {
             const id = marker.options.data && marker.options.data.id;
             if (id) {
@@ -413,7 +429,7 @@
                 if (img) img.src = newAvatar;
               }
             }
-          } catch (e) { /* ignore */ }
+          } catch (e) {}
         } catch (e) { console.warn('updateMarkerAvatar failed', e); }
       }
 
@@ -425,9 +441,7 @@
 
         const existing = findExistingMarker(s);
         if (existing) {
-          if (s.avatar) {
-            updateMarkerAvatar(existing, s.avatar);
-          }
+          if (s.avatar) updateMarkerAvatar(existing, s.avatar);
           try {
             existing.options.data = Object.assign({}, existing.options.data || {}, s);
             const id = existing.options.data && existing.options.data.id;
@@ -474,10 +488,8 @@
         else recent.appendChild(entry);
       }
 
-      // --- INSTANT loadAll: cached first (0ms), then fresh in background (no UI block) ---
       async function loadAll() {
         try {
-          // 1. INSTANT: Show cached data immediately (even if empty)
           const cached = localStorage.getItem('ritualnet_summonings');
           if (cached) {
             try {
@@ -491,7 +503,6 @@
             }
           }
 
-          // 2. NON-BLOCKING: Fetch fresh data in background
           (async () => {
             try {
               const { data, error } = await window.__supabase
@@ -502,7 +513,6 @@
 
               if (error) throw error;
 
-              // Cache fresh data (minimal)
               try {
                 const minimal = (data || []).slice(0,50).map(d => ({
                   id: d.id, name: d.name, pledge: d.pledge, avatar: d.avatar, lat: d.lat, lng: d.lng, timestamp: d.timestamp
@@ -510,7 +520,6 @@
                 localStorage.setItem('ritualnet_summonings', JSON.stringify(minimal));
               } catch (e) { console.warn('[RITUALNET] cache save failed', e); }
 
-              // Update UI *only if* new data differs (avoid flicker)
               const currentIds = new Set(Array.from(recent.children).map(el => el.dataset.id).filter(Boolean));
               const newIds = new Set(data.map(d => d.id).filter(Boolean));
               const hasChanges = data.length !== currentIds.size || ![...newIds].every(id => currentIds.has(id));
@@ -519,7 +528,6 @@
                 markers.clearLayers(); recent.innerHTML = '';
                 data.forEach(s => addSummoningToUI(s, false, { toTop: false }));
               } else {
-                // Just ensure any missing avatars are updated
                 data.forEach(s => {
                   const existing = findExistingMarker(s);
                   if (existing && s.avatar && existing.options.data?.avatar !== s.avatar) {
@@ -537,10 +545,8 @@
         }
       }
 
-      // initial load
       loadAll();
 
-      // --- Realtime + robust broadcasting/fallback ---
       let ritualChannel = null;
       let ritualSubscribed = false;
       let heartbeat = null;
@@ -552,7 +558,6 @@
 
       function connectRealtime() {
         try {
-          // cleanup previous
           ritualSubscribed = false;
           if (ritualChannel) {
             window.__supabase.removeChannel(ritualChannel).catch(()=>{});
@@ -564,7 +569,6 @@
             config: { broadcast: { self: false }, presence: { key: '' } }
           });
 
-          // postgres INSERT events
           ritualChannel
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, payload => {
               const row = payload.new || payload.record || payload;
@@ -586,7 +590,6 @@
               }
             });
 
-          // broadcast listener (fast path)
           ritualChannel
             .on('broadcast', { event: 'new_summon' }, payload => {
               try {
@@ -643,7 +646,6 @@
       connectRealtime();
       window.addEventListener('online', connectRealtime);
 
-      // sendBroadcast: wait briefly for subscription, fallback to temp channel send
       async function sendBroadcast(payload, timeoutMs = 1100) {
         const waitUntil = Date.now() + timeoutMs;
         while (!ritualSubscribed && Date.now() < waitUntil) {
@@ -671,7 +673,6 @@
         }
       }
 
-      // visibility / focus handlers (important for mobile)
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           loadAll();
@@ -683,7 +684,6 @@
       });
       window.addEventListener('focus', () => loadAll());
 
-      // --- UI interactions (same as your original file) ---
       map.on('click', function(e) {
         clickedPos = e.latlng;
 
@@ -730,11 +730,9 @@
 
         const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
 
-        // Insert into DB
         const { data, error } = await window.__supabase.from('summonings').insert(newSummon).select();
         if (error) { console.error(error); alert('Failed to join.'); return; }
 
-        // Close modal + show success
         closeModal();
         const success = document.getElementById('success');
         success.classList.add('active');
@@ -743,11 +741,9 @@
           map.flyTo(clickedPos, 10, { duration: 1.8 });
         }, 3200);
 
-        // Add locally immediately (newest at top)
         const row = (data && data[0]) ? data[0] : { ...newSummon, id: `tmp-${Date.now()}` };
         addSummoningToUI(row, true, { toTop: true });
 
-        // Broadcast for instant delivery to others
         sendBroadcast(row);
       };
 
@@ -773,10 +769,9 @@
         document.getElementById('resetConfirm').style.display = 'none';
       };
 
-      // expose for quick debugging
       window.__ritual = { map, markers, loadAll, connectRealtime, findExistingMarker };
-      console.log('[RITUALNET] initialized. Open DevTools Console to see realtime / polling logs.');
-    }); // end load
+      console.log('[RITUALNET] initialized. Map dragging disabled. Click to summon.');
+    });
   </script>
 </body>
 </html>

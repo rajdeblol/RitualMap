@@ -441,39 +441,50 @@
 
       function addSummoningToUI(s, isLocal = false, options = {}) {
         if (!s || (!s.id && !s.lat)) return;
+
         const existing = findExistingMarker(s);
         if (existing) {
+          // ---- UPDATE EXISTING MARKER ----
           existing.options.data = Object.assign({}, existing.options.data || {}, s);
           if (s.avatar) updateMarkerAvatar(existing, s.avatar);
+
           const id = existing.options.data.id;
           if (id) {
             const entry = document.querySelector(`.entry[data-id="${id}"]`);
             if (entry) {
-              const nameEl = entry.querySelector('.name');
+              const nameEl  = entry.querySelector('.name');
               const pledgeEl = entry.querySelector('.pledge');
-              if (nameEl) nameEl.textContent = '@' + (s.name || existing.options.data.name || 'ritualist');
+              if (nameEl)  nameEl.textContent  = '@' + (s.name  || existing.options.data.name  || 'ritualist');
               if (pledgeEl) pledgeEl.textContent = '"' + (s.pledge || existing.options.data.pledge || '') + '"';
             }
           }
+
+          // update popup if open
           try {
             if (existing.getPopup?.()) {
-              existing.setPopupContent(`<div style="position:relative;text-align:center;">
-                <img src="${s.avatar || existing.options.data.avatar || 'ritualnet-logo.png'}">
-                <b>@${s.name}</b><i>"${s.pledge}"</i>
-              </div>`);
+              existing.setPopupContent(`
+                <div style="position:relative;text-align:center;">
+                  <img src="${s.avatar || existing.options.data.avatar || 'ritualnet-logo.png'}">
+                  <b>@${s.name}</b><i>"${s.pledge}"</i>
+                </div>`);
             }
           } catch(e){}
+
           return;
         }
+
+        // ---- NO DUPLICATE ENTRIES ----
         if (s.id && document.querySelector(`[data-id="${s.id}"]`)) return;
 
         const placeholder = 'ritualnet-logo.png';
         const icon = createIcon(s.avatar || placeholder);
+
         const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
-        m.bindPopup(`<div style="position:relative;text-align:center;">
-          <img src="${s.avatar || placeholder}">
-          <b>@${s.name}</b><i>"${s.pledge}"</i>
-        </div>`);
+        m.bindPopup(`
+          <div style="position:relative;text-align:center;">
+            <img src="${s.avatar || placeholder}">
+            <b>@${s.name}</b><i>"${s.pledge}"</i>
+          </div>`);
 
         const entry = document.createElement('div');
         entry.className = 'entry';
@@ -482,9 +493,12 @@
           <img src="${s.avatar || placeholder}">
           <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
         `;
+
+        // **KEEP ORIGINAL POSITION – NEWEST AT TOP**
         if (options.toTop) recent.prepend(entry);
         else recent.appendChild(entry);
 
+        // lazy-load real avatar (if not already present)
         if (s.id && !s.avatar) loadAvatarAsync(s.id, m);
       }
 
@@ -599,13 +613,13 @@
                 const minimal = { id: row.id, name: row.name, pledge: row.pledge, lat: row.lat, lng: row.lng };
                 const existing = findExistingMarker(minimal);
                 if (existing) {
-                  existing.options.data = { ...existing.options.data, ...minimal };
-                  const entry = document.querySelector(`.entry[data-id="${row.id}"]`);
-                  if (entry) {
-                    entry.querySelector('.name').textContent = '@' + row.name;
-                    entry.querySelector('.pledge').textContent = '"' + row.pledge + '"';
-                  }
-                  loadAvatarAsync(row.id, existing);
+                existing.options.data = { ...existing.options.data, ...minimal };
+                const entry = document.querySelector(`.entry[data-id="${row.id}"]`);
+                if (entry) {
+                  entry.querySelector('.name').textContent = '@' + row.name;
+                  entry.querySelector('.pledge').textContent = '"' + row.pledge + '"';
+                }
+                loadAvatarAsync(row.id, existing);
                 } else {
                   addSummoningToUI(minimal, false, { toTop: true });
                   loadAvatarAsync(row.id);
@@ -758,7 +772,7 @@
       };
 
       window.__ritual = { map, markers, loadAll, connectRealtime, findExistingMarker };
-      console.log('[RITUALNET] initialized — markers appear instantly.');
+      console.log('[RITUALNET] initialized — markers appear instantly. Recent panel stays in original position.');
     });
   </script>
 </body>

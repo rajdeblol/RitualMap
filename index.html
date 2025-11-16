@@ -6,15 +6,12 @@
   <title>RITUALNET</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
     *, *::before, *::after {margin:0;padding:0;box-sizing:border-box;}
     
-    /* FULL IMMERSIVE */
     html, body {
       margin: 0; padding: 0; background: #000; overflow: hidden;
       height: 100dvh; width: 100vw; font-family: 'Rajdhani', sans-serif;
@@ -23,20 +20,13 @@
 
     #map {
       position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; z-index: 1;
-      /* prevent native dragging effect on the container */
       -webkit-user-drag: none; user-drag: none; -webkit-touch-callout: none;
     }
     .leaflet-control-zoom, .leaflet-control-attribution {display: none !important;}
-
-    /* Prevent images inside the map from being dragged by the browser */
     .leaflet-container img {
-      -webkit-user-drag: none;
-      user-drag: none;
-      -webkit-touch-callout: none;
-      pointer-events: auto;
+      -webkit-user-drag: none; user-drag: none; -webkit-touch-callout: none; pointer-events: auto;
     }
 
-    /* TITLE BAR — RESPONSIVE TEXT */
     .title-bar {
       position: fixed; top: 0; left: 0; right: 0; height: 110px;
       background: linear-gradient(to bottom, rgba(0,30,0,0.98), transparent);
@@ -62,7 +52,7 @@
       background: linear-gradient(90deg, #00ff41, #00ff99);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       text-shadow: 0 0 60px #00ff4188; letter-spacing: 8px; cursor: pointer;
-      position: relative; font-size: clamp(36px, 8vw, 56px); /* Responsive */
+      position: relative; font-size: clamp(36px, 8vw, 56px);
       white-space: nowrap; text-align: center;
     }
     .title-text::before {
@@ -87,7 +77,6 @@
       50%{opacity:0.25;transform:translate(-50%,-50%) scale(1.08);}
     }
 
-    /* MODAL */
     .modal {
       position: fixed; top: 0; left: 0; width: 100%; height: 100dvh;
       background: rgba(0,0,0,0.98); backdrop-filter: blur(20px);
@@ -95,16 +84,22 @@
       z-index: 200; padding: 20px; overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+      opacity: 0; transition: opacity 0.2s ease;
     }
+    .modal.show {display: flex; opacity: 1;}
+    
     .card {
       width: 430px; max-width: 95vw; background: #000; padding: 50px 40px;
       border: 3px solid #00ff41; border-radius: 30px; text-align: center; position: relative;
       box-shadow: 0 0 100px rgba(0,255,65,0.7);
+      transform: scale(0.9); transition: transform 0.2s ease;
     }
+    .modal.show .card {transform: scale(1);}
+    
     .close-btn {
       position: absolute; top: 20px; right: 25px; width: 40px; height: 40px;
       background: transparent; border: 2px solid #00ff41; border-radius: 50%;
-      color: #00ff41; font-size: 28px; cursor: pointer;
+      color: #00ff41; font-size: 28px; cursor: pointer; transition: 0.2s;
     }
     .close-btn:hover {background: #00ff4111; transform: rotate(90deg);}
     .card h2 {
@@ -137,40 +132,47 @@
       margin-top: 30px; padding: 20px 80px; background: #00ff41; color: #000;
       border: none; border-radius: 50px; font-family: 'Orbitron', sans-serif;
       font-size: 28px; font-weight: 900; cursor: pointer;
-      box-shadow: 0 0 60px #00ff41; transition: 0.4s;
+      box-shadow: 0 0 60px #00ff41; transition: 0.2s;
+      position: relative; overflow: hidden;
     }
-    .join-btn:hover {transform: scale(1.1); box-shadow: 0 0 100px #00ff41;}
+    .join-btn:hover {transform: scale(1.05); box-shadow: 0 0 100px #00ff41;}
+    .join-btn:active {transform: scale(0.98);}
+    .join-btn.processing {pointer-events: none; opacity: 0.8;}
+    .join-btn.processing::after {
+      content: ''; position: absolute; top: 0; left: -100%;
+      width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      animation: shimmer 1s infinite;
+    }
 
-    /* SUCCESS — CENTERED, SMOOTH */
+    @keyframes shimmer {to {left: 100%;}}
+
     .success {
       position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: #000;
       display: none; align-items: center; justify-content: center; flex-direction: column;
       z-index: 300; color: #00ff41; text-align: center; opacity: 0;
-      transition: opacity 0.6s ease; padding: 20px;
+      transition: opacity 0.3s ease; padding: 20px;
     }
-    .success.active {
-      display: flex; opacity: 1;
-    }
+    .success.active {display: flex; opacity: 1;}
 
     .success h1 {
       font-family: 'Orbitron', sans-serif; font-size: clamp(48px, 12vw, 64px);
       text-shadow: 0 0 60px #00ff41; margin: 0; position: relative; z-index: 2;
-      animation: fadeInUp 1.2s ease-out forwards;
+      animation: fadeInUp 0.6s ease-out forwards;
     }
     .success p {
       margin-top: 20px; font-size: clamp(16px, 4vw, 20px); opacity: 0;
-      animation: fadeIn 1s ease 0.8s forwards; z-index: 2;
+      animation: fadeIn 0.4s ease 0.3s forwards; z-index: 2;
     }
     .ritual-circle {
-      position: absolute; width: 300px; height: 300px; border: 3px solid #00ff41;
+      position: absolute; width: 200px; height: 200px; border: 3px solid #00ff41;
       border-radius: 50%; box-shadow: 0 0 80px #00ff41, inset 0 0 60px #00ff41;
-      animation: expandGlow 2.5s ease-out forwards; opacity: 0; z-index: 1;
+      animation: expandGlow 1.2s ease-out forwards; opacity: 0; z-index: 1;
       top: 50%; left: 50%; transform: translate(-50%, -50%);
     }
     @keyframes expandGlow {
       0% {width: 0; height: 0; opacity: 1;}
-      70% {width: 400px; height: 400px; opacity: 0.6;}
-      100% {width: 500px; height: 500px; opacity: 0;}
+      70% {width: 350px; height: 350px; opacity: 0.6;}
+      100% {width: 450px; height: 450px; opacity: 0;}
     }
     @keyframes fadeInUp {
       0% {opacity: 0; transform: translateY(30px);}
@@ -178,22 +180,12 @@
     }
     @keyframes fadeIn {to {opacity: 0.8;}}
 
-    /* PANEL — SMALL & MOBILE-FRIENDLY */
     .panel {
-      position: fixed;
-      left: 15px; bottom: 15px;
-      width: 300px; max-width: calc(100vw - 30px);
-      max-height: 240px;
-      background: #000;
-      border: 3px solid #00ff41;
-      border-radius: 20px;
-      padding: 12px;
-      box-shadow: 0 0 60px rgba(0,255,65,0.6);
-      z-index: 10;
-      overflow-y: auto;
-      display: flex; flex-direction: column;
-      scroll-behavior: smooth;
-      overscroll-behavior: contain;
+      position: fixed; left: 15px; bottom: 15px;
+      width: 300px; max-width: calc(100vw - 30px); max-height: 240px;
+      background: #000; border: 3px solid #00ff41; border-radius: 20px; padding: 12px;
+      box-shadow: 0 0 60px rgba(0,255,65,0.6); z-index: 10; overflow-y: auto;
+      display: flex; flex-direction: column; scroll-behavior: smooth; overscroll-behavior: contain;
       padding-bottom: env(safe-area-inset-bottom);
     }
     .panel h3 {
@@ -205,8 +197,12 @@
     .entry {
       display: flex; align-items: center; margin: 8px 0; padding: 10px;
       background: rgba(0,255,65,0.08); border: 2px solid #00ff41;
-      border-radius: 15px; position: relative; flex-shrink: 0;
-      scroll-snap-align: start;
+      border-radius: 15px; position: relative; flex-shrink: 0; scroll-snap-align: start;
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from {opacity: 0; transform: translateX(-20px);}
+      to {opacity: 1; transform: translateX(0);}
     }
     .entry img {
       width: 36px; height: 36px; border-radius: 50%; border: 2px solid #00ff41;
@@ -227,6 +223,9 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
+    .ritual-marker {
+      animation: markerAppear 0.4s ease-out;
+    }
     .ritual-marker img {
       border-radius: 50%; border: 4px solid #00ff41; box-shadow: 0 0 30px #00ff41; z-index: 2;
     }
@@ -234,6 +233,11 @@
       content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
       width: 60%; height: 60%; background: url('ritualnet-logo.png') center/contain no-repeat;
       opacity: 0.18; z-index: 1; pointer-events: none; animation: ritualPulse 7s infinite ease-in-out;
+    }
+    @keyframes markerAppear {
+      0% {transform: scale(0) rotate(180deg); opacity: 0;}
+      60% {transform: scale(1.2) rotate(0deg);}
+      100% {transform: scale(1) rotate(0deg); opacity: 1;}
     }
 
     #resetConfirm {
@@ -243,10 +247,12 @@
     }
     #resetConfirm button {
       margin: 15px; font-size: 22px; padding: 14px 50px; border-radius: 40px;
-      font-family: 'Orbitron', sans-serif; font-weight: 900; cursor: pointer;
+      font-family: 'Orbitron', sans-serif; font-weight: 900; cursor: pointer; transition: 0.2s;
     }
     #confirmReset {background: #00ff41; color: #000; box-shadow: 0 0 60px #00ff41;}
+    #confirmReset:hover {transform: scale(1.05);}
     #cancelReset {background: #333; color: #00ff41; border: 2px solid #00ff41;}
+    #cancelReset:hover {background: #444;}
 
     .leaflet-popup-content-wrapper {
       background: #000 !important; color: #0f0 !important;
@@ -274,9 +280,9 @@
     .map-click-pulse {
       position: absolute; width: 60px; height: 60px; background: rgba(0,255,65,0.4);
       border-radius: 50%; pointer-events: none; z-index: 999;
-      animation: clickPulse 0.8s ease-out forwards;
+      animation: clickPulse 0.6s ease-out forwards;
     }
-    @keyframes clickPulse {0% {transform: scale(0); opacity: 1;}100% {transform: scale(4); opacity: 0;}}
+    @keyframes clickPulse {0% {transform: scale(0); opacity: 1;}100% {transform: scale(3); opacity: 0;}}
   </style>
 </head>
 <body>
@@ -288,7 +294,7 @@
     <div class="title-text" id="titleLink">RITUALNET</div>
   </div>
 
-  <div class="subtitle">Let’s Make The World Ritualize</div>
+  <div class="subtitle">Let's Make The World Ritualize</div>
 
   <div class="panel">
     <h3>Recent Summonings</h3>
@@ -321,41 +327,33 @@
   </div>
 
   <script>
-    // --- Supabase init (same keys you used) ---
     const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpgv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndHRmaXFld253cHFndWhicGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTY1ODgsImV4cCI6MjA3ODc3MjU4OH0.zVK46pTGH0_Ruu20s35ep8NnsQd2ROenG_EuWezXiWg';
     const { createClient } = window.supabase;
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     window.__supabase = supabase;
 
-    // wait for load to reduce layout/leaflet sizing issues
     window.addEventListener('load', () => {
       const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+      const bounds = L.latLngBounds([[-85, -180], [85, 180]]);
 
-      // ---- BOUNDS: widened horizontally and elastic (viscosity < 1) so left/right feel roomy ----
-      // longitude range extended beyond ±180 and viscosity lowered so user can drag a bit further then snap back.
-      const bounds = L.latLngBounds([[-85, -220], [85, 220]]);
-
-      // --- Map init (dragging allowed; elastic bounds; worldCopyJump for antimeridian wrapping) ---
       const map = L.map('map', { 
         zoomControl: false, 
         attributionControl: false,
         minZoom: 2,
         maxZoom: 19,
         maxBounds: bounds,
-        maxBoundsViscosity: 0.6,   // <1 = elastic, allows a bit more movement
-        worldCopyJump: true        // makes panning across ±180° smooth
+        maxBoundsViscosity: 1,
+        worldCopyJump: false
       }).setView([10, 95], 2);
 
-      // Defensive call (ensures bounds are applied at runtime)
-      try { map.setMaxBounds(bounds); } catch (e) { /* ignore */ }
+      try { map.setMaxBounds(bounds); } catch (e) {}
 
       L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
       setTimeout(() => map.invalidateSize(), 120);
       window.addEventListener('resize', () => setTimeout(() => map.invalidateSize(), 80));
       window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 160));
 
-      // Prevent any native dragstart events inside the map (images/icons)
       const mapContainer = map.getContainer();
       if (mapContainer) {
         mapContainer.ondragstart = () => false;
@@ -393,14 +391,130 @@
         });
       });
 
-      // rest of your code (unchanged)...
-      // findExistingMarker, updateMarkerAvatar, addSummoningToUI, loadAll, realtime, UI handlers, etc.
-      // I kept all original logic exactly as before — only the bounds/viscosity/worldCopyJump were adjusted.
+      function findExistingMarker(s) {
+        if (!s) return null;
+        let found = null;
+        markers.eachLayer(m => {
+          if (found) return;
+          const md = m.options.data || {};
+          if (s.id && md.id && String(md.id) === String(s.id)) {
+            found = m; return;
+          }
+          if (s.lat != null && s.lng != null && md.lat != null && md.lng != null) {
+            const dLat = Math.abs(Number(md.lat) - Number(s.lat));
+            const dLng = Math.abs(Number(md.lng) - Number(s.lng));
+            if (dLat < 0.0004 && dLng < 0.0004) { found = m; return; }
+          }
+        });
+        return found;
+      }
 
-      // For brevity I'm exposing the same helper references and calling loadAll as before:
-      window.__ritual = { map, markers, loadAll: () => {}, connectRealtime: () => {}, findExistingMarker: () => {} };
-      console.log('[RITUALNET] map initialized with elastic horizontal bounds.');
-    }); // end load
-  </script>
-</body>
-</html>
+      function updateMarkerAvatar(marker, newAvatar) {
+        try {
+          if (!marker) return;
+          marker.options.data = marker.options.data || {};
+          marker.options.data.avatar = newAvatar;
+          marker.setIcon(createIcon(newAvatar));
+          try {
+            const popupEl = marker.getPopup ? marker.getPopup() : null;
+            if (popupEl && popupEl._contentNode) {
+              const img = popupEl._contentNode.querySelector('img');
+              if (img) img.src = newAvatar;
+            }
+          } catch (e) {}
+          try {
+            const id = marker.options.data && marker.options.data.id;
+            if (id) {
+              const entry = document.querySelector(`.entry[data-id="${id}"]`);
+              if (entry) {
+                const img = entry.querySelector('img');
+                if (img) img.src = newAvatar;
+              }
+            }
+          } catch (e) {}
+        } catch (e) { console.warn('updateMarkerAvatar failed', e); }
+      }
+
+      function addSummoningToUI(s, isLocal = false, options = {}) {
+        if (!s) return;
+        if (!s.id && !s.timestamp) {
+          if (!s.lat || !s.lng) return;
+        }
+
+        const existing = findExistingMarker(s);
+        if (existing) {
+          if (s.avatar) updateMarkerAvatar(existing, s.avatar);
+          try {
+            existing.options.data = Object.assign({}, existing.options.data || {}, s);
+            const id = existing.options.data && existing.options.data.id;
+            if (id) {
+              const entry = document.querySelector(`.entry[data-id="${id}"]`);
+              if (entry) {
+                const nameEl = entry.querySelector('.name');
+                const pledgeEl = entry.querySelector('.pledge');
+                if (nameEl) nameEl.textContent = '@' + (s.name || existing.options.data.name || 'ritualist');
+                if (pledgeEl) pledgeEl.textContent = '"' + (s.pledge || existing.options.data.pledge || '') + '"';
+              }
+            }
+            try {
+              if (existing.getPopup && existing.getPopup()) {
+                existing.setPopupContent(`<div style="position:relative;text-align:center;"><img src="${s.avatar || existing.options.data.avatar || 'ritualnet-logo.png'}" draggable="false" ondragstart="return false;"><b>@${s.name}</b><i>"${s.pledge}"</i></div>`);
+              }
+            } catch(e){}
+          } catch(e){}
+          return;
+        }
+
+        if (s.id && document.querySelector(`[data-id="${s.id}"]`)) return;
+
+        const icon = createIcon(s.avatar || 'ritualnet-logo.png');
+        const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
+
+        m.bindPopup(`
+          <div style="position:relative;text-align:center;">
+            <img src="${s.avatar || 'ritualnet-logo.png'}" draggable="false" ondragstart="return false;">
+            <b>@${s.name}</b>
+            <i>"${s.pledge}"</i>
+          </div>
+        `);
+
+        const entry = document.createElement('div');
+        entry.className = 'entry';
+        if (s.id) entry.dataset.id = s.id;
+        entry.innerHTML = `
+          <img src="${s.avatar || 'ritualnet-logo.png'}" draggable="false" ondragstart="return false;">
+          <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
+        `;
+
+        if (options.toTop) recent.prepend(entry);
+        else recent.appendChild(entry);
+      }
+
+      async function loadAll() {
+        try {
+          const cached = localStorage.getItem('ritualnet_summonings');
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached);
+              if (Array.isArray(parsed) && parsed.length) {
+                markers.clearLayers(); recent.innerHTML = '';
+                parsed.forEach(s => addSummoningToUI(s, false, { toTop: false }));
+              }
+            } catch (e) {
+              console.warn('[RITUALNET] cache parse failed', e);
+            }
+          }
+
+          (async () => {
+            try {
+              const { data, error } = await window.__supabase
+                .from('summonings')
+                .select('*')
+                .order('timestamp', { ascending: false })
+                .limit(100);
+
+              if (error) throw error;
+
+              try {
+                const minimal = (data || []).slice(0,50).map(d => ({
+                  id: d.id, name: d.name, pledge: d.pledge, avatar

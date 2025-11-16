@@ -23,7 +23,6 @@
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
     *, *::before, *::after {margin:0;padding:0;box-sizing:border-box;}
     
-    /* FULL IMMERSIVE */
     html, body {
       margin: 0; padding: 0; background: #000; overflow: hidden;
       height: 100dvh; width: 100vw; font-family: 'Rajdhani', sans-serif;
@@ -35,7 +34,7 @@
     }
     .leaflet-control-zoom, .leaflet-control-attribution {display: none !important;}
 
-    /* TITLE BAR — RESPONSIVE */
+    /* TITLE BAR */
     .title-bar {
       position: fixed; top: 0; left: 0; right: 0; height: 110px;
       background: linear-gradient(to bottom, rgba(0,30,0,0.98), transparent);
@@ -116,7 +115,7 @@
       border: 6px solid #00ff41; overflow: hidden; background: #000;
       box-shadow: 0 0 60px #00ff4188; position: relative;
     }
-    .avatar-circle img {width: 100%; height: 100%; object-fit: cover; z-index: 2;}
+      .avatar-circle img {width: 100%; height: 100%; object-fit: cover; z-index: 2;}
     .avatar-circle::before {
       content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
       width: 68%; height: 68%; background: url('ritualnet-logo.png') center/contain no-repeat;
@@ -140,9 +139,9 @@
     }
     .join-btn:hover {transform: scale(1.1); box-shadow: 0 0 100px #00ff41;}
 
-    /* SUCCESS — CENTERED */
+    /* SUCCESS */
     .success {
-      position: fixed; top: 0; left 0; width: 100%; height: 100dvh; background: #000;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: #000;
       display: none; align-items: center; justify-content: center; flex-direction: column;
       z-index: 300; color: #00ff41; text-align: center; opacity: 0; transition: opacity 0.6s ease;
       padding: 20px;
@@ -164,7 +163,7 @@
     @keyframes fadeInUp {0%{opacity:0;transform:translateY(30px);}100%{opacity:1;transform:translateY(0);}}
     @keyframes fadeIn {to{opacity:0.8;}}
 
-    /* PANEL — TOP 3 VISIBLE ON TOP */
+    /* PANEL — SCROLL TOP → BOTTOM */
     .panel {
       position: fixed;
       left: 15px; bottom: 15px;
@@ -177,7 +176,8 @@
       box-shadow: 0 0 60px rgba(0,255,65,0.6);
       z-index: 10;
       overflow-y: auto;
-      display: flex; flex-direction: column-reverse; /* NEWEST ON TOP */
+      display: flex;
+      flex-direction: column; /* ← NORMAL: TOP → BOTTOM */
       scroll-behavior: smooth;
       overscroll-behavior: contain;
       padding-bottom: env(safe-area-inset-bottom);
@@ -277,7 +277,7 @@
 
   <div class="panel">
     <h3>Recent Summonings</h3>
-    <div id="recent" style="scroll-snap-type: y mandatory;"></div>
+    <div id="recent"></div>
   </div>
 
   <div class="modal" id="ritualModal">
@@ -354,6 +354,7 @@
         <div style="position:relative;text-align:center;">
           <img src="${s.avatar || 'ritualnet-logo.png'}">
           <b>@${s.name}</b>
+ Insufficient
           <i>"${s.pledge}"</i>
         </div>
       `);
@@ -364,7 +365,7 @@
         <img src="${s.avatar || 'ritualnet-logo.png'}">
         <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
       `;
-      recent.prepend(entry); // Newest added to top
+      recent.prepend(entry); // Newest at top
     }
 
     async function loadAll() {
@@ -446,7 +447,7 @@
       addSummoningToUI(data[0]);
     };
 
-    // 7-CLICK RESET — NOW WORKS
+    // 7-CLICK RESET
     document.getElementById('ritualLogo').onclick = () => {
       logoClicks++;
       if (clickTimer) clearTimeout(clickTimer);
@@ -459,7 +460,6 @@
     };
 
     document.getElementById('confirmReset').onclick = async () => {
-      // FIXED: Delete ALL rows
       const { error } = await window.__supabase.from('summonings').delete().gt('id', 0);
       if (error) console.error(error);
       

@@ -332,24 +332,23 @@
     window.addEventListener('load', () => {
       const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
-      // --- Map init (mobile drag disabled to avoid accidental moves) ---
+      // ---- BOUNDS: change these numbers if you want a tighter/looser limit ----
+      // Using a slightly inset global box so dragging stops before showing blank/white edges.
+      const bounds = L.latLngBounds([[-80, -170], [80, 170]]);
+
+      // --- Map init (dragging allowed on all devices, but constrained by maxBounds) ---
       const map = L.map('map', { 
         zoomControl: false, 
         attributionControl: false,
         minZoom: 2,
         maxZoom: 19,
-        dragging: !isMobile,  // disable dragging on mobile
-        tap: !isMobile        // disable tap handling on some mobile browsers
+        maxBounds: bounds,
+        maxBoundsViscosity: 1,   // 1 = cannot move outside bounds
+        worldCopyJump: false
       }).setView([10, 0], 2);
 
-      // extra runtime disable (defensive)
-      if (isMobile) {
-        try { map.dragging.disable(); } catch(e){}
-        try { map.touchZoom.disable(); } catch(e){}
-        try { map.doubleClickZoom.disable(); } catch(e){}
-        try { map.boxZoom.disable(); } catch(e){}
-        try { map.keyboard.disable(); } catch(e){}
-      }
+      // Defensive call (ensures bounds are applied at runtime)
+      try { map.setMaxBounds(bounds); } catch (e) { /* ignore */ }
 
       L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
       setTimeout(() => map.invalidateSize(), 120);

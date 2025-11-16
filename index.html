@@ -23,8 +23,18 @@
 
     #map {
       position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; z-index: 1;
+      /* prevent native dragging effect on the container */
+      -webkit-user-drag: none; user-drag: none; -webkit-touch-callout: none;
     }
     .leaflet-control-zoom, .leaflet-control-attribution {display: none !important;}
+
+    /* Prevent images inside the map from being dragged by the browser */
+    .leaflet-container img {
+      -webkit-user-drag: none;
+      user-drag: none;
+      -webkit-touch-callout: none;
+      pointer-events: auto;
+    }
 
     /* TITLE BAR — RESPONSIVE TEXT */
     .title-bar {
@@ -201,6 +211,7 @@
     .entry img {
       width: 36px; height: 36px; border-radius: 50%; border: 2px solid #00ff41;
       margin-right: 10px; box-shadow: 0 0 20px #00ff4188; z-index: 2;
+      -webkit-user-drag: none; user-drag: none;
     }
     .entry::before {
       content: ''; position: absolute; top: 50%; left: 18px; transform: translate(-50%,-50%);
@@ -270,10 +281,10 @@
 </head>
 <body>
 
-  <div id="map"></div>
+  <div id="map" draggable="false" ondragstart="return false;"></div>
 
   <div class="title-bar">
-    <div id="ritualLogo"><img src="ritualnet-logo.png"></div>
+    <div id="ritualLogo"><img src="ritualnet-logo.png" draggable="false"></div>
     <div class="title-text" id="titleLink">RITUALNET</div>
   </div>
 
@@ -288,7 +299,7 @@
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
       <h2>PERFORM THE RITUAL</h2>
-      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview"></div>
+      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview" draggable="false"></div>
       <label class="upload-btn">UPLOAD AVATAR</label>
       <input type="file" id="avatarInput" accept="image/*" style="display:none;">
       <input type="text" class="input-field" id="username" placeholder="X / Twitter username">
@@ -319,18 +330,38 @@
 
     // wait for load to reduce layout/leaflet sizing issues
     window.addEventListener('load', () => {
-      // --- Map init (same as your first file) ---
+      const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+
+      // --- Map init (mobile drag disabled to avoid accidental moves) ---
       const map = L.map('map', { 
         zoomControl: false, 
         attributionControl: false,
         minZoom: 2,
-        maxZoom: 19
+        maxZoom: 19,
+        dragging: !isMobile,  // disable dragging on mobile
+        tap: !isMobile        // disable tap handling on some mobile browsers
       }).setView([10, 0], 2);
+
+      // extra runtime disable (defensive)
+      if (isMobile) {
+        try { map.dragging.disable(); } catch(e){}
+        try { map.touchZoom.disable(); } catch(e){}
+        try { map.doubleClickZoom.disable(); } catch(e){}
+        try { map.boxZoom.disable(); } catch(e){}
+        try { map.keyboard.disable(); } catch(e){}
+      }
 
       L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
       setTimeout(() => map.invalidateSize(), 120);
       window.addEventListener('resize', () => setTimeout(() => map.invalidateSize(), 80));
       window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 160));
+
+      // Prevent any native dragstart events inside the map (images/icons)
+      const mapContainer = map.getContainer();
+      if (mapContainer) {
+        mapContainer.ondragstart = () => false;
+        mapContainer.addEventListener('dragstart', e => e.preventDefault());
+      }
 
       const markers = L.layerGroup().addTo(map);
       const recent = document.getElementById('recent');
@@ -350,7 +381,7 @@
         const s = getSize();
         return L.divIcon({
           className: 'ritual-marker',
-          html: `<img src="${src}" style="width:${s}px;height:${s}px;">`,
+          html: `<img src="${src}" style="width:${s}px;height:${s}px;" draggable="false" ondragstart="return false;">`,
           iconSize: [s, s],
           iconAnchor: [s/2, s/2]
         });
@@ -442,7 +473,7 @@
             }
             try {
               if (existing.getPopup && existing.getPopup()) {
-                existing.setPopupContent(`<div style="position:relative;text-align:center;"><img src="${s.avatar || existing.options.data.avatar || 'ritualnet-logo.png'}"><b>@${s.name}</b><i>"${s.pledge}"</i></div>`);
+                existing.setPopupContent(`<div style="position:relative;text-align:center;"><img src="${s.avatar || existing.options.data.avatar || 'ritualnet-logo.png'}" draggable="false" ondragstart="return false;"><b>@${s.name}</b><i>"${s.pledge}"</i></div>`);
               }
             } catch(e){}
           } catch(e){}
@@ -456,7 +487,7 @@
 
         m.bindPopup(`
           <div style="position:relative;text-align:center;">
-            <img src="${s.avatar || 'ritualnet-logo.png'}">
+            <img src="${s.avatar || 'ritualnet-logo.png'}" draggable="false" ondragstart="return false;">
             <b>@${s.name}</b>
             <i>"${s.pledge}"</i>
           </div>
@@ -466,7 +497,7 @@
         entry.className = 'entry';
         if (s.id) entry.dataset.id = s.id;
         entry.innerHTML = `
-          <img src="${s.avatar || 'ritualnet-logo.png'}">
+          <img src="${s.avatar || 'ritualnet-logo.png'}" draggable="false" ondragstart="return false;">
           <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
         `;
 
@@ -547,7 +578,6 @@
       let realtimeConnected = false;
       let pollingInterval = null;
 
-      const isMobile = /Mobi|Android/i.test(navigator.userAgent);
       const POLL_INTERVAL_MS = isMobile ? 2000 : 1000;
 
       function connectRealtime() {
@@ -572,7 +602,7 @@
               if (existing) {
                 if (row.avatar) updateMarkerAvatar(existing, row.avatar);
                 existing.options.data = Object.assign({}, existing.options.data || {}, row);
-                try { existing.setPopupContent(`<div style="position:relative;text-align:center;"><img src="${row.avatar || existing.options.data.avatar || 'ritualnet-logo.png'}"><b>@${row.name}</b><i>"${row.pledge}"</i></div>`); } catch(e){}
+                try { existing.setPopupContent(`<div style="position:relative;text-align:center;"><img src="${row.avatar || existing.options.data.avatar || 'ritualnet-logo.png'}" draggable="false" ondragstart="return false;"><b>@${row.name}</b><i>"${row.pledge}"</i></div>`); } catch(e){}
                 if (row.id) {
                   const entry = document.querySelector(`.entry[data-id="${row.id}"]`);
                   if (entry) {
@@ -596,7 +626,7 @@
                 if (existing) {
                   if (row.avatar) updateMarkerAvatar(existing, row.avatar);
                   existing.options.data = Object.assign({}, existing.options.data || {}, row);
-                  try { existing.setPopupContent(`<div style="position:relative;text-align:center;"><img src="${row.avatar || existing.options.data.avatar || 'ritualnet-logo.png'}"><b>@${row.name}</b><i>"${row.pledge}"</i></div>`); } catch(e){}
+                  try { existing.setPopupContent(`<div style="position:relative;text-align:center;"><img src="${row.avatar || existing.options.data.avatar || 'ritualnet-logo.png'}" draggable="false" ondragstart="return false;"><b>@${row.name}</b><i>"${row.pledge}"</i></div>`); } catch(e){}
                   if (row.id) {
                     const entry = document.querySelector(`.entry[data-id="${row.id}"]`);
                     if (entry) {

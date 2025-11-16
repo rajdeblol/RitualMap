@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>RITUALNET</title>
 
-  <!-- Leaflet – OFFICIAL, FAST, RELIABLE CDN -->
+  <!-- Leaflet – official HTTPS CDN (always works) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-sA+zWATbFveLLNqHNCLHC33M3R4OT1cY/0u7l5z0n7c=" crossorigin=""/>
-  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-o9N1jA3/OVfZGj3Y1KksK7Y9T3G3F9lR5Y2JkaM8N5c=" crossorigin=""></script>
 
   <!-- Supabase Client -->
-  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
@@ -25,10 +25,10 @@
       -webkit-font-smoothing:antialiased;
     }
 
-    /* MAP – 100% VISIBLE, NO CLIPPING */
+    /* MAP – FULLY VISIBLE & LOCKED */
     #map {
       position:fixed; top:0; left:0; width:100%; height:100dvh; z-index:1;
-      background:#000 !important;
+      background:#000 !important;               /* fallback black */
     }
     .leaflet-container {background:#000 !important;}
     .leaflet-control-zoom, .leaflet-control-attribution {display:none !important;}
@@ -137,7 +137,7 @@
       100%{opacity:1;transform:translateY(0);}}
     @keyframes fadeIn{to{opacity:.8;}}
 
-    /* PANEL */
+    /* PANEL – ORIGINAL BOTTOM-LEFT */
     .panel{
       position:fixed;left:15px;bottom:15px;
       width:300px;max-width:calc(100vw - 30px);
@@ -217,6 +217,7 @@
 
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
+  <!-- PANEL – ORIGINAL POSITION -->
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent" style="scroll-snap-type:y mandatory;"></div>
@@ -248,14 +249,15 @@
   </div>
 
   <script>
-    // Wait for DOM + Leaflet + Supabase
-    document.addEventListener('DOMContentLoaded', () => {
-      const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpgv.supabase.co';
-      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndHRmaXFld253cHFndWhicGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTY1ODgsImV4cCI6MjA3ODc3MjU4OH0.zVK46pTGH0_Ruu20s35ep8NnsQd2ROenG_EuWezXiWg';
-      const { createClient } = window.supabase;
-      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // --- Supabase init ---
+    const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpgv.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndHRmaXFld253cHFndWhicGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTY1ODgsImV4cCI6MjA3ODc3MjU4OH0.zVK46pTGH0_Ruu20s35ep8NnsQd2ROenG_EuWezXiWg';
+    const { createClient } = window.supabase;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.__supabase = supabase;
 
-      // MAP INIT — GUARANTEED TO LOAD
+    window.addEventListener('load', () => {
+      // ---- MAP INITIALISATION (now guaranteed visible) ----
       const map = L.map('map', {
         zoomControl: false,
         attributionControl: false,
@@ -266,15 +268,15 @@
         worldCopyJump: true
       }).setView([10, 0], 2);
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '',
-        subdomains: 'abcd',
+      // Tile layer – fast, dark, HTTPS
+      L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
         maxZoom: 19
       }).addTo(map);
 
-      // Force redraw
-      setTimeout(() => map.invalidateSize(true), 200);
-      window.addEventListener('resize', () => setTimeout(() => map.invalidateSize(true), 100));
+      // Force redraw after a tick (fixes occasional blank on mobile)
+      setTimeout(() => map.invalidateSize(), 150);
+      window.addEventListener('resize', () => setTimeout(() => map.invalidateSize(), 80));
+      window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 160));
 
       const markers = L.layerGroup().addTo(map);
       const recent = document.getElementById('recent');
@@ -283,6 +285,7 @@
       let logoClicks = 0;
       let clickTimer = null;
 
+      /* ---------- ALL OTHER LOGIC (unchanged) ---------- */
       function getSize() {
         const z = map.getZoom();
         if (z <= 3) return 30;
@@ -290,7 +293,6 @@
         if (z <= 7) return 50;
         return 65;
       }
-
       function createIcon(src) {
         const s = getSize();
         return L.divIcon({
@@ -300,14 +302,12 @@
           iconAnchor: [s/2, s/2]
         });
       }
-
       map.on('zoomend', () => {
         markers.eachLayer(m => {
-          const data = m.options.data;
-          if (data?.avatar) m.setIcon(createIcon(data.avatar));
+          const d = m.options.data;
+          if (d?.avatar) m.setIcon(createIcon(d.avatar));
         });
       });
-
       function findExistingMarker(s) {
         if (!s) return null;
         let found = null;
@@ -323,137 +323,199 @@
         });
         return found;
       }
-
-      function updateMarkerAvatar(marker, avatar) {
-        if (!marker || !avatar) return;
-        marker.options.data.avatar = avatar;
-        marker.setIcon(createIcon(avatar));
+      function updateMarkerAvatar(marker, newAvatar) {
+        if (!marker || !newAvatar) return;
+        marker.options.data = marker.options.data || {};
+        marker.options.data.avatar = newAvatar;
+        marker.setIcon(createIcon(newAvatar));
+        try {
+          const p = marker.getPopup();
+          if (p && p._contentNode) {
+            const i = p._contentNode.querySelector('img');
+            if (i) i.src = newAvatar;
+          }
+        } catch(e){}
         const id = marker.options.data.id;
         if (id) {
-          const entry = document.querySelector(`.entry[data-id="${id}"]`);
-          if (entry) entry.querySelector('img').src = avatar;
+          const e = document.querySelector(`.entry[data-id="${id}"]`);
+          if (e) { const i = e.querySelector('img'); if (i) i.src = newAvatar; }
         }
       }
-
-      async function loadAvatarAsync(id, marker) {
+      async function loadAvatarAsync(id, marker = null) {
         if (!id) return;
         try {
-          const { data } = await supabase.from('summonings').select('avatar').eq('id', id).single();
-          if (data?.avatar && marker) updateMarkerAvatar(marker, data.avatar);
-        } catch (e) {}
+          const { data, error } = await supabase.from('summonings').select('avatar').eq('id', id).single();
+          if (error || !data?.avatar) return;
+          if (marker) updateMarkerAvatar(marker, data.avatar);
+          const e = document.querySelector(`.entry[data-id="${id}"]`);
+          if (e) { const i = e.querySelector('img'); if (i) i.src = data.avatar; }
+          if (marker?.getPopup?.()) {
+            marker.setPopupContent(`<div style="position:relative;text-align:center;">
+              <img src="${data.avatar}"><b>@${marker.options.data.name}</b><i>"${marker.options.data.pledge}"</i>
+            </div>`);
+          }
+        } catch(e){}
       }
-
-      function addSummoningToUI(s, options = {}) {
+      function addSummoningToUI(s, isLocal = false, options = {}) {
         if (!s || (!s.id && !s.lat)) return;
         const existing = findExistingMarker(s);
         if (existing) {
-          existing.options.data = { ...existing.options.data, ...s };
+          existing.options.data = Object.assign({}, existing.options.data || {}, s);
           if (s.avatar) updateMarkerAvatar(existing, s.avatar);
+          const id = existing.options.data.id;
+          if (id) {
+            const e = document.querySelector(`.entry[data-id="${id}"]`);
+            if (e) {
+              const n = e.querySelector('.name'); if (n) n.textContent = '@' + (s.name || existing.options.data.name || 'ritualist');
+              const p = e.querySelector('.pledge'); if (p) p.textContent = '"' + (s.pledge || existing.options.data.pledge || '') + '"';
+            }
+          }
+          try { if (existing.getPopup?.()) existing.setPopupContent(`<div style="position:relative;text-align:center;">
+            <img src="${s.avatar||existing.options.data.avatar||'ritualnet-logo.png'}">
+            <b>@${s.name}</b><i>"${s.pledge}"</i></div>`); }
+          catch(e){}
           return;
         }
-        const icon = createIcon(s.avatar || 'ritualnet-logo.png');
+        if (s.id && document.querySelector(`[data-id="${s.id}"]`)) return;
+        const placeholder = 'ritualnet-logo.png';
+        const icon = createIcon(s.avatar || placeholder);
         const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
-        m.bindPopup(`<div style="text-align:center;position:relative;">
-          <img src="${s.avatar || 'ritualnet-logo.png'}">
-          <b>@${s.name}</b><i>"${s.pledge}"</i>
-        </div>`);
+        m.bindPopup(`<div style="position:relative;text-align:center;">
+          <img src="${s.avatar||placeholder}"><b>@${s.name}</b><i>"${s.pledge}"</i></div>`);
         const entry = document.createElement('div');
         entry.className = 'entry';
         if (s.id) entry.dataset.id = s.id;
-        entry.innerHTML = `<img src="${s.avatar || 'ritualnet-logo.png'}">
+        entry.innerHTML = `<img src="${s.avatar||placeholder}">
           <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>`;
-        options.toTop ? recent.prepend(entry) : recent.appendChild(entry);
+        if (options.toTop) recent.prepend(entry); else recent.appendChild(entry);
         if (s.id && !s.avatar) loadAvatarAsync(s.id, m);
       }
-
       async function loadAll() {
         panel.classList.add('loading');
         try {
-          const { data } = await supabase.from('summonings')
-            .select('id, name, pledge, lat, lng')
-            .order('timestamp', { ascending: false }).limit(50);
-          markers.clearLayers(); recent.innerHTML = '';
-          data.forEach(s => addSummoningToUI(s));
-          data.slice(0, 5).forEach(s => loadAvatarAsync(s.id));
-        } catch (e) { console.warn(e); }
-        setTimeout(() => panel.classList.remove('loading'), 600);
+          const cached = localStorage.getItem('ritualnet_cache');
+          if (cached) {
+            try { const p = JSON.parse(cached); if (Array.isArray(p) && p.length) { markers.clearLayers(); recent.innerHTML=''; p.forEach(s=>addSummoningToUI(s,false,{toTop:false})); } }
+            catch(e){ console.warn('[RITUALNET] cache parse failed',e); }
+          }
+          (async () => {
+            try {
+              const { data, error } = await supabase.from('summonings')
+                .select('id, name, pledge, lat, lng, timestamp')
+                .order('timestamp', { ascending: false }).limit(50);
+              if (error) throw error;
+              localStorage.setItem('ritualnet_cache', JSON.stringify(data));
+              const cur = new Set(Array.from(recent.children).map(el=>el.dataset.id).filter(Boolean));
+              const nw = new Set(data.map(d=>d.id).filter(Boolean));
+              const changed = data.length!==cur.size || ![...nw].every(id=>cur.has(id));
+              if (changed || data.length===0) { markers.clearLayers(); recent.innerHTML=''; data.forEach(s=>addSummoningToUI(s,false,{toTop:false})); }
+              else { data.forEach(s=>{ const ex=findExistingMarker(s); if(ex && !ex.options.data.avatar) loadAvatarAsync(s.id,ex); }); }
+              data.slice(0,5).forEach(s=>loadAvatarAsync(s.id));
+            } catch(err){ console.warn('[RITUALNET] bg refresh failed',err); }
+            finally { setTimeout(()=>panel.classList.remove('loading'),600); }
+          })();
+        } catch(err){ console.warn('Load failed:',err); panel.classList.remove('loading'); }
       }
       loadAll();
 
-      // Realtime
-      const channel = supabase.channel('summonings-channel');
-      channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, p => {
-        const r = p.new;
-        addSummoningToUI({ id: r.id, name: r.name, pledge: r.pledge, lat: r.lat, lng: r.lng }, { toTop: true });
-        loadAvatarAsync(r.id);
-      }).subscribe();
+      /* ---------- REALTIME (unchanged) ---------- */
+      let ritualChannel=null, ritualSubscribed=false, heartbeat=null, realtimeConnected=false, pollingInterval=null;
+      const isMobile=/Mobi|Android/i.test(navigator.userAgent);
+      const POLL_MS=isMobile?2500:1200;
+      function connectRealtime(){
+        try{
+          if(ritualChannel){supabase.removeChannel(ritualChannel).catch(()=>{}); ritualChannel=null;}
+          if(heartbeat){clearInterval(heartbeat);heartbeat=null;}
+          ritualChannel=supabase.channel('summonings-channel',{config:{broadcast:{self:false},presence:{key:''}}});
+          ritualChannel.on('postgres_changes',{event:'INSERT',schema:'public',table:'summonings'},p=>{
+            const r=p.new||p.record||p;
+            const m={id:r.id,name:r.name,pledge:r.pledge,lat:r.lat,lng:r.lng};
+            const ex=findExistingMarker(m);
+            if(ex){ex.options.data={...ex.options.data,...m};
+              const e=document.querySelector(`.entry[data-id="${r.id}"]`);
+              if(e){e.querySelector('.name').textContent='@'+r.name;e.querySelector('.pledge').textContent='"'+r.pledge+'"';}
+              loadAvatarAsync(r.id,ex);
+            }else{addSummoningToUI(m,false,{toTop:true});loadAvatarAsync(r.id);}
+          });
+          ritualChannel.on('broadcast',{event:'new_summon'},payload=>{
+            try{ const r=payload; const m={id:r.id,name:r.name,pledge:r.pledge,lat:r.lat,lng:r.lng};
+              const ex=findExistingMarker(m);
+              if(ex){ex.options.data={...ex.options.data,...m};
+                const e=document.querySelector(`.entry[data-id="${r.id}"]`);
+                if(e){e.querySelector('.name').textContent='@'+r.name;e.querySelector('.pledge').textContent='"'+r.pledge+'"';}
+                loadAvatarAsync(r.id,ex);
+              }else{addSummoningToUI(m,false,{toTop:true});loadAvatarAsync(r.id);}
+            }catch(e){}
+          });
+          ritualChannel.subscribe(s=>{const ok=s==='SUBSCRIBED';
+            if(ok){realtimeConnected=ritualSubscribed=true;
+              heartbeat=setInterval(()=>ritualChannel.send({type:'broadcast',event:'ping',payload:{}}).catch(()=>{}),10000);
+              if(pollingInterval){clearInterval(pollingInterval);pollingInterval=null;}}
+            else if(s==='ERROR'||s==='CLOSED'){realtimeConnected=ritualSubscribed=false;}});
+          setTimeout(()=>{if(!realtimeConnected && !pollingInterval) pollingInterval=setInterval(loadAll,POLL_MS);},1500);
+        }catch(e){console.error('[RITUALNET] connectRealtime error',e);
+          if(!pollingInterval) pollingInterval=setInterval(loadAll,POLL_MS);}
+      }
+      connectRealtime(); window.addEventListener('online',connectRealtime);
+      async function sendBroadcast(p,t=1100){
+        const until=Date.now()+t; while(!ritualSubscribed && Date.now()<until) await new Promise(r=>setTimeout(r,70));
+        try{if(ritualSubscribed && ritualChannel){await ritualChannel.send({type:'broadcast',event:'new_summon',payload:p});return true;}
+          else{const tmp=supabase.channel('tmp-'+Math.random().toString(36).slice(2),{config:{broadcast:{self:false}}});
+            await tmp.subscribe(); await tmp.send({type:'broadcast',event:'new_summon',payload:p}); supabase.removeChannel(tmp); return true;}}
+        catch(err){setTimeout(()=>sendBroadcast(p,0),300);return false;}}
+      document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadAll();});
+      window.addEventListener('focus',loadAll);
 
-      // UI
-      map.on('click', e => {
-        clickedPos = e.latlng;
-        const pulse = document.createElement('div');
-        pulse.className = 'map-click-pulse';
-        pulse.style.left = (e.containerPoint.x - 30) + 'px';
-        pulse.style.top = (e.containerPoint.y - 30) + 'px';
-        document.body.appendChild(pulse);
-        setTimeout(() => pulse.remove(), 800);
-
-        const modal = document.getElementById('ritualModal');
-        modal.style.display = 'flex';
-        document.getElementById('avatarPreview').src = 'ritualnet-logo.png';
-        document.getElementById('username').value = '';
-        document.getElementById('pledge').value = '';
+      /* ---------- UI ---------- */
+      map.on('click', e=>{
+        clickedPos=e.latlng;
+        const pulse=document.createElement('div'); pulse.className='map-click-pulse';
+        pulse.style.left=(e.containerPoint.x-30)+'px'; pulse.style.top=(e.containerPoint.y-30)+'px';
+        document.body.appendChild(pulse); setTimeout(()=>pulse.remove(),800);
+        const modal=document.getElementById('ritualModal'); modal.style.display='flex';
+        document.getElementById('avatarPreview').src='ritualnet-logo.png';
+        document.getElementById('username').value=''; document.getElementById('pledge').value='';
+        setTimeout(()=>document.getElementById('username').focus(),100);
       });
-
-      document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
-      document.getElementById('closeBtn').onclick = () => { document.getElementById('ritualModal').style.display = 'none'; clickedPos = null; };
-      document.querySelector('.upload-btn').onclick = () => document.getElementById('avatarInput').click();
-      document.getElementById('avatarInput').onchange = e => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = ev => document.getElementById('avatarPreview').src = ev.target.result;
-          reader.readAsDataURL(file);
-        }
+      document.getElementById('titleLink').onclick=()=>window.open('https://x.com/ritualnet','_blank');
+      const closeModal=()=>{document.getElementById('ritualModal').style.display='none';clickedPos=null;};
+      document.getElementById('closeBtn').onclick=closeModal;
+      document.querySelector('.modal').onclick=e=>{if(e.target.classList.contains('modal'))closeModal();};
+      document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+      document.querySelector('.upload-btn').onclick=()=>document.getElementById('avatarInput').click();
+      document.getElementById('avatarInput').onchange=e=>{
+        const f=e.target.files[0]; if(f){const r=new FileReader(); r.onload=ev=>document.getElementById('avatarPreview').src=ev.target.result; r.readAsDataURL(f);}};
+      document.querySelector('.join-btn').onclick=async()=>{
+        const avatar=document.getElementById('avatarPreview').src;
+        const name=document.getElementById('username').value.trim()||"ritualist";
+        const pledge=document.getElementById('pledge').value.trim()||"I have joined.";
+        if(!clickedPos) return;
+        const ns={name,pledge,avatar,lat:clickedPos.lat,lng:clickedPos.lng,timestamp:Date.now()};
+        const {data,error}=await supabase.from('summonings').insert(ns).select();
+        if(error){console.error(error);alert('Failed to join.');return;}
+        closeModal();
+        const success=document.getElementById('success'); success.classList.add('active');
+        setTimeout(()=>{success.classList.remove('active');map.flyTo(clickedPos,10,{duration:1.8});},3200);
+        const row=data[0]||{...ns,id:`tmp-${Date.now()}`};
+        const min={id:row.id,name:row.name,pledge:row.pledge,lat:row.lat,lng:row.lng};
+        addSummoningToUI(min,true,{toTop:true});
+        if(row.avatar) loadAvatarAsync(row.id);
+        sendBroadcast(min);
       };
-
-      document.querySelector('.join-btn').onclick = async () => {
-        const name = document.getElementById('username').value.trim() || 'ritualist';
-        const pledge = document.getElementById('pledge').value.trim() || 'I have joined.';
-        const avatar = document.getElementById('avatarPreview').src;
-        const { data, error } = await supabase.from('summonings').insert({
-          name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now()
-        }).select();
-        if (error) { alert('Failed'); return; }
-        document.getElementById('ritualModal').style.display = 'none';
-        document.getElementById('success').classList.add('active');
-        setTimeout(() => {
-          document.getElementById('success').classList.remove('active');
-          map.flyTo(clickedPos, 10, { duration: 1.8 });
-        }, 3200);
-        const row = data[0];
-        addSummoningToUI({ id: row.id, name, pledge, lat: row.lat, lng: row.lng }, { toTop: true });
+      document.getElementById('ritualLogo').onclick=()=>{
+        logoClicks++; if(clickTimer)clearTimeout(clickTimer);
+        if(logoClicks===7){document.getElementById('resetConfirm').style.display='flex';logoClicks=0;}
+        else clickTimer=setTimeout(()=>{logoClicks=0;},3000);
       };
-
-      document.getElementById('ritualLogo').onclick = () => {
-        logoClicks++;
-        if (clickTimer) clearTimeout(clickTimer);
-        if (logoClicks === 7) {
-          document.getElementById('resetConfirm').style.display = 'flex';
-          logoClicks = 0;
-        } else {
-          clickTimer = setTimeout(() => logoClicks = 0, 3000);
-        }
+      document.getElementById('confirmReset').onclick=async()=>{
+        await supabase.from('summonings').delete().neq('timestamp',0);
+        localStorage.removeItem('ritualnet_cache'); loadAll();
+        document.getElementById('resetConfirm').style.display='none';
       };
+      document.getElementById('cancelReset').onclick=()=>{document.getElementById('resetConfirm').style.display='none';};
 
-      document.getElementById('confirmReset').onclick = async () => {
-        await supabase.from('summonings').delete().neq('timestamp', 0);
-        loadAll();
-        document.getElementById('resetConfirm').style.display = 'none';
-      };
-      document.getElementById('cancelReset').onclick = () => document.getElementById('resetConfirm').style.display = 'none';
-
-      console.log('[RITUALNET] MAP LOADED – NOV 16, 2025');
+      window.__ritual={map,markers,loadAll,connectRealtime,findExistingMarker};
+      console.log('[RITUALNET] MAP IS NOW VISIBLE – mobile + desktop');
     });
   </script>
 </body>

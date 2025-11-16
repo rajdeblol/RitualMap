@@ -71,7 +71,7 @@
       white-space: nowrap; z-index: 100;
     }
 
-    @keyframes glow {0%{filter: drop-shadow(0 0 30px #00ff41);}100%{filter: drop-shadow(0 0 70px #00ff41);}}
+    @keyframes glow {0%{filter:  drop-shadow(0 0 30px #00ff41);}100%{filter: drop-shadow(0 0 70px #00ff41);}}
     @keyframes ritualPulse {
       0%,100%{opacity:0.15;transform:translate(-50%,-50%) scale(1);}
       50%{opacity:0.25;transform:translate(-50%,-50%) scale(1.08);}
@@ -168,7 +168,7 @@
     }
     @keyframes fadeIn {to {opacity: 0.8;}}
 
-    /* PANEL — SMALL & MOBILE-FRIENDLY */
+    /* PANEL — ORIGINAL POSITION & STYLE PRESERVED */
     .panel {
       position: fixed;
       left: 15px; bottom: 15px;
@@ -198,7 +198,7 @@
     @keyframes shimmer { 0% { background-position: -200%; } 100% { background-position: 200%; } }
 
     .panel h3 {
-      font-family: 'Orbitron', sans-serif; color: #00ff41; font-size: 18px;
+      font-family: 'Orbitron', sans-serif; color: #00FFC1; font-size: 18px;
       text-shadow: 0 0 20px #00ff41; margin-bottom: 8px; text-align: center;
       background: #001100; padding: 8px; border-radius: 15px;
       box-shadow: 0 0 30px #00ff41 inset; font-weight: 900;
@@ -290,6 +290,7 @@
 
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
+  <!-- PANEL IN ORIGINAL POSITION -->
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent" style="scroll-snap-type: y mandatory;"></div>
@@ -430,7 +431,7 @@
             if (img) img.src = data.avatar;
           }
           if (marker?.getPopup?.()) {
-            marker.setPopupContent(`<div style="position:relative;text-align:center;">
+            marker.setPopupContent(`<div style="position:relative;text-align:center:center;">
               <img src="${data.avatar}">
               <b>@${marker.options.data.name}</b>
               <i>"${marker.options.data.pledge}"</i>
@@ -444,7 +445,6 @@
 
         const existing = findExistingMarker(s);
         if (existing) {
-          // ---- UPDATE EXISTING MARKER ----
           existing.options.data = Object.assign({}, existing.options.data || {}, s);
           if (s.avatar) updateMarkerAvatar(existing, s.avatar);
 
@@ -459,7 +459,6 @@
             }
           }
 
-          // update popup if open
           try {
             if (existing.getPopup?.()) {
               existing.setPopupContent(`
@@ -473,7 +472,6 @@
           return;
         }
 
-        // ---- NO DUPLICATE ENTRIES ----
         if (s.id && document.querySelector(`[data-id="${s.id}"]`)) return;
 
         const placeholder = 'ritualnet-logo.png';
@@ -494,18 +492,16 @@
           <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
         `;
 
-        // **KEEP ORIGINAL POSITION – NEWEST AT TOP**
+        // NEWEST AT TOP — ORIGINAL BEHAVIOR
         if (options.toTop) recent.prepend(entry);
         else recent.appendChild(entry);
 
-        // lazy-load real avatar (if not already present)
         if (s.id && !s.avatar) loadAvatarAsync(s.id, m);
       }
 
       async function loadAll() {
         panel.classList.add('loading');
         try {
-          // 1. INSTANT: Minimal cached data
           const cached = localStorage.getItem('ritualnet_cache');
           if (cached) {
             try {
@@ -519,7 +515,6 @@
             }
           }
 
-          // 2. BACKGROUND: Full fresh data
           (async () => {
             try {
               const { data, error } = await supabase
@@ -548,7 +543,6 @@
                 });
               }
 
-              // Preload top 5 avatars
               data.slice(0, 5).forEach(s => loadAvatarAsync(s.id));
 
             } catch (err) {
@@ -613,13 +607,13 @@
                 const minimal = { id: row.id, name: row.name, pledge: row.pledge, lat: row.lat, lng: row.lng };
                 const existing = findExistingMarker(minimal);
                 if (existing) {
-                existing.options.data = { ...existing.options.data, ...minimal };
-                const entry = document.querySelector(`.entry[data-id="${row.id}"]`);
-                if (entry) {
-                  entry.querySelector('.name').textContent = '@' + row.name;
-                  entry.querySelector('.pledge').textContent = '"' + row.pledge + '"';
-                }
-                loadAvatarAsync(row.id, existing);
+                  existing.options.data = { ...existing.options.data, ...minimal };
+                  const entry = document.querySelector(`.entry[data-id="${row.id}"]`);
+                  if (entry) {
+                    entry.querySelector('.name').textContent = '@' + row.name;
+                    entry.querySelector('.pledge').textContent = '"' + row.pledge + '"';
+                  }
+                  loadAvatarAsync(row.id, existing);
                 } else {
                   addSummoningToUI(minimal, false, { toTop: true });
                   loadAvatarAsync(row.id);
@@ -667,7 +661,7 @@
             await ritualChannel.send({ type: 'broadcast', event: 'new_summon', payload });
             return true;
           } else {
-            const tempCh = supabase.channel('tmp-' + Math.random().toString(36).slice(2), { config: { broadcast: { self: false } } });
+            const tempCh = supabase.channel('tmp-' + Math.random().toString(36).slice(2), { config  : { broadcast: { self: false } } });
             await tempCh.subscribe();
             await tempCh.send({ type: 'broadcast', event: 'new_summon', payload });
             supabase.removeChannel(tempCh);
@@ -772,7 +766,7 @@
       };
 
       window.__ritual = { map, markers, loadAll, connectRealtime, findExistingMarker };
-      console.log('[RITUALNET] initialized — markers appear instantly. Recent panel stays in original position.');
+      console.log('[RITUALNET] initialized — markers instant, panel in original position (bottom-left).');
     });
   </script>
 </body>

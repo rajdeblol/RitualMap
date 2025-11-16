@@ -120,7 +120,7 @@
       font-size: 18px; text-align: center; cursor: pointer; transition: 0.3s;
     }
     .upload-btn:hover, .input-field:focus, .pledge-field:focus {
-      background: # P002200; border-style: solid; outline: none;
+      background: #002200; border-style: solid; outline: none;
     }
     .pledge-field {height: 100px; resize: none; text-align: left; padding: 20px;}
     .join-btn {
@@ -546,7 +546,8 @@
       let pollingInterval = null;
 
       const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-      const POLL_INTERVAL_MS = isMobile ? 2000 : 1000;
+      // Poll every 250-300 ms → 4× per second, eliminates 30-40s feel
+      const POLL_INTERVAL_MS = isMobile ? 300 : 250;
 
       function connectRealtime() {
         try {
@@ -557,6 +558,7 @@
             ritualChannel = null;
           }
           if (heartbeat) { clearInterval(heartbeat); heartbeat = null; }
+          if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
 
           ritualChannel = window.__supabase.channel('summonings-channel', {
             config: { broadcast: { self: false }, presence: { key: '' } }
@@ -618,27 +620,19 @@
             if (ok) {
               realtimeConnected = true;
               ritualSubscribed = true;
-              // heartbeat to keep connection alive & check health
+              // shorter keep-alive
               heartbeat = setInterval(() => {
                 try { ritualChannel.send({ type: 'broadcast', event: 'ping', payload: {} }).catch(()=>{}); } catch(e){}
-              }, 10000);
-              // clear poll fallback if running
+              }, 8000);
               if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
             } else {
-              // start or keep polling fallback if not subscribed after a short delay
-              if (status === 'ERROR' || status === 'CLOSED' || /UNAUTHORIZED/i.test(String(status))) {
-                realtimeConnected = false;
-                ritualSubscribed = false;
-              }
+              realtimeConnected = false;
+              ritualSubscribed = false;
             }
           });
 
-          // start polling fallback quickly if no connection
-          setTimeout(() => {
-            if (!realtimeConnected && !pollingInterval) {
-              pollingInterval = setInterval(() => loadAll(), POLL_INTERVAL_MS);
-            }
-          }, 1500);
+          // Start polling **immediately** — no 1.5s delay
+          pollingInterval = setInterval(() => loadAll(), POLL_INTERVAL_MS);
 
         } catch (e) {
           console.error('[RITUALNET] connectRealtime error', e);
@@ -649,11 +643,11 @@
       connectRealtime();
       window.addEventListener('online', connectRealtime);
 
-      // sendBroadcast: wait briefly for subscription, fallback to temp channel send
-      async function sendBroadcast(payload, timeoutMs = 1100) {
+      // sendBroadcast: reduced wait time
+      async function sendBroadcast(payload, timeoutMs = 400) {
         const waitUntil = Date.now() + timeoutMs;
         while (!ritualSubscribed && Date.now() < waitUntil) {
-          await new Promise(r => setTimeout(r, 70));
+          await new Promise(r => setTimeout(r, 50));
         }
 
         try {

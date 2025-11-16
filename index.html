@@ -168,7 +168,7 @@
     }
     @keyframes fadeIn {to {opacity: 0.8;}}
 
-    /* PANEL — ORIGINAL POSITION & STYLE PRESERVED */
+    /* PANEL — set to fixed bottom-left (restored) */
     .panel {
       position: fixed;
       left: 15px; bottom: 15px;
@@ -185,7 +185,6 @@
       scroll-behavior: smooth;
       overscroll-behavior: contain;
       padding-bottom: env(safe-area-inset-bottom);
-      position: relative;
     }
     .panel::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -290,7 +289,7 @@
 
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
-  <!-- PANEL IN ORIGINAL POSITION -->
+  <!-- PANEL IN ORIGINAL POSITION (bottom-left fixed) -->
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent" style="scroll-snap-type: y mandatory;"></div>
@@ -766,7 +765,7 @@
       };
 
       window.__ritual = { map, markers, loadAll, connectRealtime, findExistingMarker };
-      console.log('[RITUALNET] initialized — markers instant, panel in original position (bottom-left).');
+      console.log('[RITUALNET] initialized — markers instant, panel bottom-left fixed.');
     });
   </script>
 </body>

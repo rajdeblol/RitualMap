@@ -14,19 +14,32 @@
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
     *, *::before, *::after {margin:0;padding:0;box-sizing:border-box;}
     
-    /* FULL IMMERSIVE */
+    /* FULL IMMERSIVE — MOBILE & DESKTOP */
     html, body {
       margin: 0; padding: 0; background: #000; overflow: hidden;
       height: 100dvh; width: 100vw; font-family: 'Rajdhani', sans-serif;
       color: #0f0; touch-action: manipulation; position: fixed;
+      -webkit-font-smoothing: antialiased;
     }
 
+    /* MAP — LOCKED IN PLACE (NO WHITE SCREEN EVER) */
     #map {
       position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; z-index: 1;
+      overflow: hidden !important;
+      touch-action: pan-x pan-y pinch-zoom !important;
+      user-select: none !important;
+      background: #000 !important;
+    }
+    .leaflet-container {
+      background: #000 !important;
+      overflow: hidden !important;
+    }
+    .leaflet-pane, .leaflet-tile-pane, .leaflet-overlay-pane {
+      overflow: hidden !important;
     }
     .leaflet-control-zoom, .leaflet-control-attribution {display: none !important;}
 
-    /* TITLE BAR — RESPONSIVE TEXT */
+    /* TITLE BAR — RESPONSIVE & CLEAN */
     .title-bar {
       position: fixed; top: 0; left: 0; right: 0; height: 110px;
       background: linear-gradient(to bottom, rgba(0,30,0,0.98), transparent);
@@ -52,7 +65,7 @@
       background: linear-gradient(90deg, #00ff41, #00ff99);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       text-shadow: 0 0 60px #00ff4188; letter-spacing: 8px; cursor: pointer;
-      position: relative; font-size: clamp(36px, 8vw, 56px); /* Responsive */
+      position: relative; font-size: clamp(36px, 8vw, 56px);
       white-space: nowrap; text-align: center;
     }
     .title-text::before {
@@ -71,13 +84,13 @@
       white-space: nowrap; z-index: 100;
     }
 
-    @keyframes glow {0%{filter:  drop-shadow(0 0 30px #00ff41);}100%{filter: drop-shadow(0 0 70px #00ff41);}}
+    @keyframes glow {0%{filter: drop-shadow(0 0 30px #00ff41);}100%{filter: drop-shadow(0 0 70px #00ff41);}}
     @keyframes ritualPulse {
       0%,100%{opacity:0.15;transform:translate(-50%,-50%) scale(1);}
       50%{opacity:0.25;transform:translate(-50%,-50%) scale(1.08);}
     }
 
-    /* MODAL */
+    /* MODAL — SMOOTH & MOBILE-OPTIMIZED */
     .modal {
       position: fixed; top: 0; left: 0; width: 100%; height: 100dvh;
       background: rgba(0,0,0,0.98); backdrop-filter: blur(20px);
@@ -95,6 +108,7 @@
       position: absolute; top: 20px; right: 25px; width: 40px; height: 40px;
       background: transparent; border: 2px solid #00ff41; border-radius: 50%;
       color: #00ff41; font-size: 28px; cursor: pointer;
+      transition: 0.3s;
     }
     .close-btn:hover {background: #00ff4111; transform: rotate(90deg);}
     .card h2 {
@@ -131,7 +145,7 @@
     }
     .join-btn:hover {transform: scale(1.1); box-shadow: 0 0 100px #00ff41;}
 
-    /* SUCCESS — CENTERED, SMOOTH */
+    /* SUCCESS — SMOOTH & CENTERED */
     .success {
       position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: #000;
       display: none; align-items: center; justify-content: center; flex-direction: column;
@@ -168,7 +182,7 @@
     }
     @keyframes fadeIn {to {opacity: 0.8;}}
 
-    /* PANEL — set to fixed bottom-left (restored) */
+    /* PANEL — FIXED BOTTOM-LEFT (ORIGINAL POSITION) */
     .panel {
       position: fixed;
       left: 15px; bottom: 15px;
@@ -197,7 +211,7 @@
     @keyframes shimmer { 0% { background-position: -200%; } 100% { background-position: 200%; } }
 
     .panel h3 {
-      font-family: 'Orbitron', sans-serif; color: #00FFC1; font-size: 18px;
+      font-family: 'Orbitron', sans-serif; color: #00ff41; font-size: 18px;
       text-shadow: 0 0 20px #00ff41; margin-bottom: 8px; text-align: center;
       background: #001100; padding: 8px; border-radius: 15px;
       box-shadow: 0 0 30px #00ff41 inset; font-weight: 900;
@@ -283,13 +297,13 @@
   <div id="map"></div>
 
   <div class="title-bar">
-    <div id="ritualLogo"><img src="ritualnet-logo.png"></div>
+    <div id="ritualLogo"><img src="ritualnet-logo.png" alt="RitualNet Logo"></div>
     <div class="title-text" id="titleLink">RITUALNET</div>
   </div>
 
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
-  <!-- PANEL IN ORIGINAL POSITION (bottom-left fixed) -->
+  <!-- PANEL — ORIGINAL POSITION (BOTTOM-LEFT) -->
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent" style="scroll-snap-type: y mandatory;"></div>
@@ -299,7 +313,7 @@
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
       <h2>PERFORM THE RITUAL</h2>
-      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview"></div>
+      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview" alt="Avatar"></div>
       <label class="upload-btn">UPLOAD AVATAR</label>
       <input type="file" id="avatarInput" accept="image/*" style="display:none;">
       <input type="text" class="input-field" id="username" placeholder="X / Twitter username">
@@ -334,7 +348,10 @@
         zoomControl: false, 
         attributionControl: false,
         minZoom: 2,
-        maxZoom: 19
+        maxZoom: 19,
+        maxBounds: [[-90, -180], [90, 180]],
+        maxBoundsViscosity: 1.0,
+        worldCopyJump: true
       }).setView([10, 0], 2);
 
       L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -430,7 +447,7 @@
             if (img) img.src = data.avatar;
           }
           if (marker?.getPopup?.()) {
-            marker.setPopupContent(`<div style="position:relative;text-align:center:center;">
+            marker.setPopupContent(`<div style="position:relative;text-align:center;">
               <img src="${data.avatar}">
               <b>@${marker.options.data.name}</b>
               <i>"${marker.options.data.pledge}"</i>
@@ -491,7 +508,6 @@
           <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
         `;
 
-        // NEWEST AT TOP — ORIGINAL BEHAVIOR
         if (options.toTop) recent.prepend(entry);
         else recent.appendChild(entry);
 
@@ -660,7 +676,7 @@
             await ritualChannel.send({ type: 'broadcast', event: 'new_summon', payload });
             return true;
           } else {
-            const tempCh = supabase.channel('tmp-' + Math.random().toString(36).slice(2), { config  : { broadcast: { self: false } } });
+            const tempCh = supabase.channel('tmp-' + Math.random().toString(36).slice(2), { config: { broadcast: { self: false } } });
             await tempCh.subscribe();
             await tempCh.send({ type: 'broadcast', event: 'new_summon', payload });
             supabase.removeChannel(tempCh);
@@ -765,7 +781,7 @@
       };
 
       window.__ritual = { map, markers, loadAll, connectRealtime, findExistingMarker };
-      console.log('[RITUALNET] initialized — markers instant, panel bottom-left fixed.');
+      console.log('[RITUALNET] Ready — Mobile + Web, No white screen, Panel locked, UX clean.');
     });
   </script>
 </body>

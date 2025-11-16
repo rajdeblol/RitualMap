@@ -35,7 +35,7 @@
     }
     .leaflet-control-zoom, .leaflet-control-attribution {display: none !important;}
 
-    /* TITLE BAR — RESPONSIVE TEXT */
+    /* TITLE BAR — RESPONSIVE */
     .title-bar {
       position: fixed; top: 0; left: 0; right: 0; height: 110px;
       background: linear-gradient(to bottom, rgba(0,30,0,0.98), transparent);
@@ -61,7 +61,7 @@
       background: linear-gradient(90deg, #00ff41, #00ff99);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       text-shadow: 0 0 60px #00ff4188; letter-spacing: 8px; cursor: pointer;
-      position: relative; font-size: clamp(36px, 8vw, 56px); /* Responsive */
+      position: relative; font-size: clamp(36px, 8vw, 56px);
       white-space: nowrap; text-align: center;
     }
     .title-text::before {
@@ -129,7 +129,7 @@
       font-size: 18px; text-align: center; cursor: pointer; transition: 0.3s;
     }
     .upload-btn:hover, .input-field:focus, .pledge-field:focus {
-      background: # P002200; border-style: solid; outline: none;
+      background: #002200; border-style: solid; outline: none;
     }
     .pledge-field {height: 100px; resize: none; text-align: left; padding: 20px;}
     .join-btn {
@@ -140,44 +140,31 @@
     }
     .join-btn:hover {transform: scale(1.1); box-shadow: 0 0 100px #00ff41;}
 
-    /* SUCCESS — CENTERED, SMOOTH */
+    /* SUCCESS — CENTERED */
     .success {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: #000;
+      position: fixed; top: 0; left 0; width: 100%; height: 100dvh; background: #000;
       display: none; align-items: center; justify-content: center; flex-direction: column;
-      z-index: 300; color: #00ff41; text-align: center; opacity: 0;
-      transition: opacity 0.6s ease; padding: 20px;
+      z-index: 300; color: #00ff41; text-align: center; opacity: 0; transition: opacity 0.6s ease;
+      padding: 20px;
     }
-    .success.active {
-      display: flex; opacity: 1;
-    }
-
+    .success.active {display: flex; opacity: 1;}
     .success h1 {
       font-family: 'Orbitron', sans-serif; font-size: clamp(48px, 12vw, 64px);
-      text-shadow: 0 0 60px #00ff41; margin: 0; position: relative; z-index: 2;
+      text-shadow: 0 0 60px #00ff41; margin: 0; z-index: 2;
       animation: fadeInUp 1.2s ease-out forwards;
     }
-    .success p {
-      margin-top: 20px; font-size: clamp(16px, 4vw, 20px); opacity: 0;
-      animation: fadeIn 1s ease 0.8s forwards; z-index: 2;
-    }
+    .success p {margin-top: 20px; font-size: clamp(16px, 4vw, 20px); opacity: 0; animation: fadeIn 1s ease 0.8s forwards; z-index: 2;}
     .ritual-circle {
       position: absolute; width: 300px; height: 300px; border: 3px solid #00ff41;
       border-radius: 50%; box-shadow: 0 0 80px #00ff41, inset 0 0 60px #00ff41;
       animation: expandGlow 2.5s ease-out forwards; opacity: 0; z-index: 1;
       top: 50%; left: 50%; transform: translate(-50%, -50%);
     }
-    @keyframes expandGlow {
-      0% {width: 0; height: 0; opacity: 1;}
-      70% {width: 400px; height: 400px; opacity: 0.6;}
-      100% {width: 500px; height: 500px; opacity: 0;}
-    }
-    @keyframes fadeInUp {
-      0% {opacity: 0; transform: translateY(30px);}
-      100% {opacity: 1; transform: translateY(0);}
-    }
-    @keyframes fadeIn {to {opacity: 0.8;}}
+    @keyframes expandGlow {0%{width:0;height:0;opacity:1;}70%{width:400px;height:400px;opacity:0.6;}100%{width:500px;height:500px;opacity:0;}}
+    @keyframes fadeInUp {0%{opacity:0;transform:translateY(30px);}100%{opacity:1;transform:translateY(0);}}
+    @keyframes fadeIn {to{opacity:0.8;}}
 
-    /* PANEL — SMALL & MOBILE-FRIENDLY */
+    /* PANEL — TOP 3 VISIBLE ON TOP */
     .panel {
       position: fixed;
       left: 15px; bottom: 15px;
@@ -190,7 +177,7 @@
       box-shadow: 0 0 60px rgba(0,255,65,0.6);
       z-index: 10;
       overflow-y: auto;
-      display: flex; flex-direction: column;
+      display: flex; flex-direction: column-reverse; /* NEWEST ON TOP */
       scroll-behavior: smooth;
       overscroll-behavior: contain;
       padding-bottom: env(safe-area-inset-bottom);
@@ -377,7 +364,7 @@
         <img src="${s.avatar || 'ritualnet-logo.png'}">
         <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
       `;
-      recent.prepend(entry);
+      recent.prepend(entry); // Newest added to top
     }
 
     async function loadAll() {
@@ -459,6 +446,7 @@
       addSummoningToUI(data[0]);
     };
 
+    // 7-CLICK RESET — NOW WORKS
     document.getElementById('ritualLogo').onclick = () => {
       logoClicks++;
       if (clickTimer) clearTimeout(clickTimer);
@@ -471,9 +459,13 @@
     };
 
     document.getElementById('confirmReset').onclick = async () => {
-      await window.__supabase.from('summonings').delete().neq('timestamp', 0);
+      // FIXED: Delete ALL rows
+      const { error } = await window.__supabase.from('summonings').delete().gt('id', 0);
+      if (error) console.error(error);
+      
       localStorage.removeItem('ritualnet_summonings');
-      loadAll();
+      markers.clearLayers();
+      recent.innerHTML = '';
       document.getElementById('resetConfirm').style.display = 'none';
     };
 

@@ -115,7 +115,7 @@
       border: 6px solid #00ff41; overflow: hidden; background: #000;
       box-shadow: 0 0 60px #00ff4188; position: relative;
     }
-      .avatar-circle img {width: 100%; height: 100%; object-fit: cover; z-index: 2;}
+    .avatar-circle img {width: 100%; height: 100%; object-fit: cover; z-index: 2;}
     .avatar-circle::before {
       content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
       width: 68%; height: 68%; background: url('ritualnet-logo.png') center/contain no-repeat;
@@ -128,7 +128,7 @@
       font-size: 18px; text-align: center; cursor: pointer; transition: 0.3s;
     }
     .upload-btn:hover, .input-field:focus, .pledge-field:focus {
-      background: #002200; border-style: solid; outline: none;
+      background: #002200; border-style: solid; border-color: #00ff41; outline: none;
     }
     .pledge-field {height: 100px; resize: none; text-align: left; padding: 20px;}
     .join-btn {
@@ -163,7 +163,7 @@
     @keyframes fadeInUp {0%{opacity:0;transform:translateY(30px);}100%{opacity:1;transform:translateY(0);}}
     @keyframes fadeIn {to{opacity:0.8;}}
 
-    /* PANEL — SCROLL TOP → BOTTOM */
+    /* PANEL — LATEST AT TOP */
     .panel {
       position: fixed;
       left: 15px; bottom: 15px;
@@ -177,7 +177,7 @@
       z-index: 10;
       overflow-y: auto;
       display: flex;
-      flex-direction: column; /* ← NORMAL: TOP → BOTTOM */
+      flex-direction: column; /* TOP → BOTTOM */
       scroll-behavior: smooth;
       overscroll-behavior: contain;
       padding-bottom: env(safe-area-inset-bottom);
@@ -187,9 +187,15 @@
       text-shadow: 0 0 20px #00ff41; margin-bottom: 8px; text-align: center;
       background: #001100; padding: 8px; border-radius: 15px;
       box-shadow: 0 0 30px #00ff41 inset; font-weight: 900;
+      flex-shrink: 0;
+    }
+    #recent {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
     .entry {
-      display: flex; align-items: center; margin: 8px 0; padding: 10px;
+      display: flex; align-items: center; padding: 10px;
       background: rgba(0,255,65,0.08); border: 2px solid #00ff41;
       border-radius: 15px; position: relative; flex-shrink: 0;
       scroll-snap-align: start;
@@ -205,10 +211,10 @@
     }
     .entry .name {
       color: #00ff88; font-weight: bold; font-family: 'Orbitron', sans-serif;
-      font-size: 14px; text-align: left; flex: 1;
+      font-size: 14px; flex: 1;
     }
     .entry .pledge {
-      color: #00ff88; font-size: 12px; margin-top: 2px; text-align: left; flex: 1;
+      color: #00ff88; font-size: 12px; margin-top: 2px; flex: 1;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
@@ -250,7 +256,7 @@
     .leaflet-popup-content::before {
       content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       width: 40px; height: 40px; background: url('ritualnet-logo.png') center/contain no-repeat;
-      opacity: 0.18; z-index: 1; pointer-events: none; animation: ritualPulse 6s infinite ease-in-out;
+      opacity: 0.18; z-index: 1; animation: ritualPulse 6s infinite ease-in-out;
     }
     .leaflet-popup-content b {color: #00ff41 !important; font-size: 16px !important; display: block; margin: 6px 0;}
     .leaflet-popup-content i {font-size: 13px !important; opacity: 0.9; display: block;}
@@ -354,7 +360,6 @@
         <div style="position:relative;text-align:center;">
           <img src="${s.avatar || 'ritualnet-logo.png'}">
           <b>@${s.name}</b>
- Insufficient
           <i>"${s.pledge}"</i>
         </div>
       `);
@@ -365,7 +370,9 @@
         <img src="${s.avatar || 'ritualnet-logo.png'}">
         <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
       `;
-      recent.prepend(entry); // Newest at top
+
+      // INSERT AT TOP
+      recent.insertBefore(entry, recent.firstChild);
     }
 
     async function loadAll() {

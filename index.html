@@ -1,11 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>RITUALNET</title>
-
-  <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -14,29 +12,21 @@
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
-
+    *, *::before, *::after {margin:0;padding:0;box-sizing:border-box;}
+    
+    /* FULL IMMERSIVE */
     html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      width: 100%;
-      font-family: 'Rajdhani', sans-serif;
-      background: #000;
-      color: #0f0;
-      overflow: hidden;
+      margin: 0; padding: 0; background: #000; overflow: hidden;
+      height: 100dvh; width: 100vw; font-family: 'Rajdhani', sans-serif;
+      color: #0f0; touch-action: manipulation; position: fixed;
     }
 
     #map {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100vh;
-      z-index: 1;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; z-index: 1;
     }
+    .leaflet-control-zoom, .leaflet-control-attribution {display: none !important;}
 
-    .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
-
+    /* TITLE BAR — RESPONSIVE TEXT */
     .title-bar {
       position: fixed; top: 0; left: 0; right: 0; height: 110px;
       background: linear-gradient(to bottom, rgba(0,30,0,0.98), transparent);
@@ -44,64 +34,237 @@
       z-index: 100; user-select: none; padding-top: env(safe-area-inset-top);
       flex-wrap: wrap; padding: 10px;
     }
-    #ritualLogo {width: 70px; height: 70px; cursor: pointer; filter: drop-shadow(0 0 40px #00ff41); animation: glow 5s infinite alternate; transition: 0.3s; position: relative; flex-shrink: 0;}
+    #ritualLogo {
+      width: 70px; height: 70px; cursor: pointer;
+      filter: drop-shadow(0 0 40px #00ff41); animation: glow 5s infinite alternate;
+      transition: 0.3s; position: relative; flex-shrink: 0;
+    }
     #ritualLogo img {width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 2;}
-    #ritualLogo::before {content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 68%; height: 68%; background: url('ritualnet-logo.png') center/contain no-repeat; opacity: 0.18; z-index: -1; pointer-events: none; animation: ritualPulse 6s infinite ease-in-out;}
+    #ritualLogo::before {
+      content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      width: 68%; height: 68%; background: url('ritualnet-logo.png') center/contain no-repeat;
+      opacity: 0.18; z-index: -1; pointer-events: none; animation: ritualPulse 6s infinite ease-in-out;
+    }
     #ritualLogo:hover {transform: scale(1.25);}
 
-    .title-text {font-family: 'Orbitron', sans-serif; font-weight: 900; background: linear-gradient(90deg, #00ff41, #00ff99); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 60px #00ff4188; letter-spacing: 8px; cursor: pointer; position: relative; font-size: clamp(36px, 8vw, 56px); white-space: nowrap; text-align: center;}
-    .title-text::before {content: 'RITUALNET'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: inherit; letter-spacing: 8px; opacity: 0.18; background: linear-gradient(90deg, #00ff41, #00ff99); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: ritualPulse 6s infinite ease-in-out; z-index: -1;}
-    .subtitle {position: fixed; top: calc(110px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); font-size: 14px; letter-spacing: 2px; color: #00ff88; text-shadow: 0 0 20px #00ff41; font-family: 'Orbitron', sans-serif; white-space: nowrap; z-index: 100;}
+    .title-text {
+      font-family: 'Orbitron', sans-serif; font-weight: 900;
+      background: linear-gradient(90deg, #00ff41, #00ff99);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 60px #00ff4188; letter-spacing: 8px; cursor: pointer;
+      position: relative; font-size: clamp(36px, 8vw, 56px); /* Responsive */
+      white-space: nowrap; text-align: center;
+    }
+    .title-text::before {
+      content: 'RITUALNET'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      font-size: inherit; letter-spacing: 8px; opacity: 0.18;
+      background: linear-gradient(90deg, #00ff41, #00ff99);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      animation: ritualPulse 6s infinite ease-in-out; z-index: -1;
+    }
+
+    .subtitle {
+      position: fixed; top: calc(110px + env(safe-area-inset-top));
+      left: 50%; transform: translateX(-50%);
+      font-size: 14px; letter-spacing: 2px; color: #00ff88;
+      text-shadow: 0 0 20px #00ff41; font-family: 'Orbitron', sans-serif;
+      white-space: nowrap; z-index: 100;
+    }
 
     @keyframes glow {0%{filter: drop-shadow(0 0 30px #00ff41);}100%{filter: drop-shadow(0 0 70px #00ff41);}}
-    @keyframes ritualPulse {0%,100%{opacity:0.15;transform:translate(-50%,-50%) scale(1);}50%{opacity:0.25;transform:translate(-50%,-50%) scale(1.08);}}
+    @keyframes ritualPulse {
+      0%,100%{opacity:0.15;transform:translate(-50%,-50%) scale(1);}
+      50%{opacity:0.25;transform:translate(-50%,-50%) scale(1.08);}
+    }
 
-    .modal {position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.98); backdrop-filter: blur(20px); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);}
-    .card {width: 430px; max-width: 95vw; background: #000; padding: 50px 40px; border: 3px solid #00ff41; border-radius: 30px; text-align: center; position: relative; box-shadow: 0 0 100px rgba(0,255,65,0.7);}
-    .close-btn {position: absolute; top: 20px; right: 25px; width: 40px; height: 40px; background: transparent; border: 2px solid #00ff41; border-radius: 50%; color: #00ff41; font-size: 28px; cursor: pointer;}
+    /* MODAL */
+    .modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100dvh;
+      background: rgba(0,0,0,0.98); backdrop-filter: blur(20px);
+      display: none; align-items: center; justify-content: center;
+      z-index: 200; padding: 20px; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+    }
+    .card {
+      width: 430px; max-width: 95vw; background: #000; padding: 50px 40px;
+      border: 3px solid #00ff41; border-radius: 30px; text-align: center; position: relative;
+      box-shadow: 0 0 100px rgba(0,255,65,0.7);
+    }
+    .close-btn {
+      position: absolute; top: 20px; right: 25px; width: 40px; height: 40px;
+      background: transparent; border: 2px solid #00ff41; border-radius: 50%;
+      color: #00ff41; font-size: 28px; cursor: pointer;
+    }
     .close-btn:hover {background: #00ff4111; transform: rotate(90deg);}
-    .card h2 {font-family: 'Orbitron', sans-serif; color: #00ff41; font-size: 42px; text-shadow: 0 0 30px #00ff41; margin-bottom: 40px; letter-spacing: 8px;}
-    .avatar-circle {width: 140px; height: 140px; border-radius: 50%; margin: 30px auto; border: 6px solid #00ff41; overflow: hidden; background: #000; box-shadow: 0 0 60px #00ff4188; position: relative;}
-    .avatar-circle img {width: 100%; height: 100%; object-fit: cover; z-index: 2;}
-    .avatar-circle::before {content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 68%; height: 68%; background: url('ritualnet-logo.png') center/contain no-repeat; opacity: 0.18; z-index: 1; pointer-events: none; animation: ritualPulse 6s infinite ease-in-out;}
+    .card h2 {
+      font-family: 'Orbitron', sans-serif; color: #00ff41; font-size: 42px;
+      text-shadow: 0 0 30px #00ff41; margin-bottom: 40px; letter-spacing: 8px;
+    }
 
-    .upload-btn, .input-field, .pledge-field {width: 100%; padding: 18px; margin: 18px 0; background: #001100; border: 2px dashed #00ff41; border-radius: 20px; color: #00ff88; font-size: 18px; text-align: center; cursor: pointer; transition: 0.3s;}
-    .upload-btn:hover, .input-field:focus, .pledge-field:focus {background: #002200; border-style: solid; outline: none;}
+    .avatar-circle {
+      width: 140px; height: 140px; border-radius: 50%; margin: 30px auto;
+      border: 6px solid #00ff41; overflow: hidden; background: #000;
+      box-shadow: 0 0 60px #00ff4188; position: relative;
+    }
+    .avatar-circle img {width: 100%; height: 100%; object-fit: cover; z-index: 2;}
+    .avatar-circle::before {
+      content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      width: 68%; height: 68%; background: url('ritualnet-logo.png') center/contain no-repeat;
+      opacity: 0.18; z-index: 1; pointer-events: none; animation: ritualPulse 6s infinite ease-in-out;
+    }
+
+    .upload-btn, .input-field, .pledge-field {
+      width: 100%; padding: 18px; margin: 18px 0; background: #001100;
+      border: 2px dashed #00ff41; border-radius: 20px; color: #00ff88;
+      font-size: 18px; text-align: center; cursor: pointer; transition: 0.3s;
+    }
+    .upload-btn:hover, .input-field:focus, .pledge-field:focus {
+      background: # P002200; border-style: solid; outline: none;
+    }
     .pledge-field {height: 100px; resize: none; text-align: left; padding: 20px;}
-    .join-btn {margin-top: 30px; padding: 20px 80px; background: #00ff41; color: #000; border: none; border-radius: 50px; font-family: 'Orbitron', sans-serif; font-size: 28px; font-weight: 900; cursor: pointer; box-shadow: 0 0 60px #00ff41; transition: 0.4s;}
+    .join-btn {
+      margin-top: 30px; padding: 20px 80px; background: #00ff41; color: #000;
+      border: none; border-radius: 50px; font-family: 'Orbitron', sans-serif;
+      font-size: 28px; font-weight: 900; cursor: pointer;
+      box-shadow: 0 0 60px #00ff41; transition: 0.4s;
+    }
     .join-btn:hover {transform: scale(1.1); box-shadow: 0 0 100px #00ff41;}
 
-    .success {position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: #000; display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 300; color: #00ff41; text-align: center; opacity: 0; transition: opacity 0.6s ease; padding: 20px;}
-    .success.active {display: flex; opacity: 1;}
-    .success h1 {font-family: 'Orbitron', sans-serif; font-size: clamp(48px, 12vw, 64px); text-shadow: 0 0 60px #00ff41; margin: 0; position: relative; z-index: 2; animation: fadeInUp 1.2s ease-out forwards;}
-    .success p {margin-top: 20px; font-size: clamp(16px, 4vw, 20px); opacity: 0; animation: fadeIn 1s ease 0.8s forwards; z-index: 2;}
-    .ritual-circle {position: absolute; width: 300px; height: 300px; border: 3px solid #00ff41; border-radius: 50%; box-shadow: 0 0 80px #00ff41, inset 0 0 60px #00ff41; animation: expandGlow 2.5s ease-out forwards; opacity: 0; z-index: 1; top: 50%; left: 50%; transform: translate(-50%, -50%);}
-    @keyframes expandGlow {0% {width: 0; height: 0; opacity: 1;}70% {width: 400px; height: 400px; opacity: 0.6;}100% {width: 500px; height: 500px; opacity: 0;}}
-    @keyframes fadeInUp {0% {opacity: 0; transform: translateY(30px);}100% {opacity: 1; transform: translateY(0);} }
+    /* SUCCESS — CENTERED, SMOOTH */
+    .success {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: #000;
+      display: none; align-items: center; justify-content: center; flex-direction: column;
+      z-index: 300; color: #00ff41; text-align: center; opacity: 0;
+      transition: opacity 0.6s ease; padding: 20px;
+    }
+    .success.active {
+      display: flex; opacity: 1;
+    }
+
+    .success h1 {
+      font-family: 'Orbitron', sans-serif; font-size: clamp(48px, 12vw, 64px);
+      text-shadow: 0 0 60px #00ff41; margin: 0; position: relative; z-index: 2;
+      animation: fadeInUp 1.2s ease-out forwards;
+    }
+    .success p {
+      margin-top: 20px; font-size: clamp(16px, 4vw, 20px); opacity: 0;
+      animation: fadeIn 1s ease 0.8s forwards; z-index: 2;
+    }
+    .ritual-circle {
+      position: absolute; width: 300px; height: 300px; border: 3px solid #00ff41;
+      border-radius: 50%; box-shadow: 0 0 80px #00ff41, inset 0 0 60px #00ff41;
+      animation: expandGlow 2.5s ease-out forwards; opacity: 0; z-index: 1;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+    }
+    @keyframes expandGlow {
+      0% {width: 0; height: 0; opacity: 1;}
+      70% {width: 400px; height: 400px; opacity: 0.6;}
+      100% {width: 500px; height: 500px; opacity: 0;}
+    }
+    @keyframes fadeInUp {
+      0% {opacity: 0; transform: translateY(30px);}
+      100% {opacity: 1; transform: translateY(0);}
+    }
     @keyframes fadeIn {to {opacity: 0.8;}}
 
-    .panel {position: fixed; left: 15px; bottom: 15px; width: 300px; max-width: calc(100vw - 30px); max-height: 240px; background: #000; border: 3px solid #00ff41; border-radius: 20px; padding: 12px; box-shadow: 0 0 60px rgba(0,255,65,0.6); z-index: 10; overflow-y: auto; display: flex; flex-direction: column; scroll-behavior: smooth; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom);}
-    .panel h3 {font-family: 'Orbitron', sans-serif; color: #00ff41; font-size: 18px; text-shadow: 0 0 20px #00ff41; margin-bottom: 8px; text-align: center; background: #001100; padding: 8px; border-radius: 15px; box-shadow: 0 0 30px #00ff41 inset; font-weight: 900;}
-    .entry {display: flex; align-items: center; margin: 8px 0; padding: 10px; background: rgba(0,255,65,0.08); border: 2px solid #00ff41; border-radius: 15px; position: relative; flex-shrink: 0; scroll-snap-align: start; opacity: 0; transform: translateY(6px) scale(0.98); animation: fadeInEntry 360ms ease forwards;}
-    @keyframes fadeInEntry { to {opacity: 1; transform: translateY(0) scale(1);} }
-    .entry img {width: 36px; height: 36px; border-radius: 50%; border: 2px solid #00ff41; margin-right: 10px; box-shadow: 0 0 20px #00ff4188; z-index: 2;}
-    .entry::before {content: ''; position: absolute; top: 50%; left: 18px; transform: translate(-50%,-50%); width: 28px; height: 28px; background: url('ritualnet-logo.png') center/contain no-repeat; opacity: 0.18; z-index: 1; pointer-events: none; animation: ritualPulse 5s infinite ease-in-out;}
-    .entry .name {color: #00ff88; font-weight: bold; font-family: 'Orbitron', sans-serif; font-size: 14px; text-align: left; flex: 1;}
-    .entry .pledge {color: #00ff88; font-size: 12px; margin-top: 2px; text-align: left; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-    .ritual-marker img {border-radius: 50%; border: 4px solid #00ff41; box-shadow: 0 0 30px #00ff41; z-index: 2;}
-    .ritual-marker::after {content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 60%; height: 60%; background: url('ritualnet-logo.png') center/contain no-repeat; opacity: 0.18; z-index: 1; pointer-events: none; animation: ritualPulse 7s infinite ease-in-out;}
-    #resetConfirm {position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.98); backdrop-filter: blur(20px); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 400; color: #00ff41; text-align: center; font-family: 'Orbitron', sans-serif;}
-    #resetConfirm button {margin: 15px; font-size: 22px; padding: 14px 50px; border-radius: 40px; font-family: 'Orbitron', sans-serif; font-weight: 900; cursor: pointer;}
+    /* PANEL — SMALL & MOBILE-FRIENDLY */
+    .panel {
+      position: fixed;
+      left: 15px; bottom: 15px;
+      width: 300px; max-width: calc(100vw - 30px);
+      max-height: 240px;
+      background: #000;
+      border: 3px solid #00ff41;
+      border-radius: 20px;
+      padding: 12px;
+      box-shadow: 0 0 60px rgba(0,255,65,0.6);
+      z-index: 10;
+      overflow-y: auto;
+      display: flex; flex-direction: column;
+      scroll-behavior: smooth;
+      overscroll-behavior: contain;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .panel h3 {
+      font-family: 'Orbitron', sans-serif; color: #00ff41; font-size: 18px;
+      text-shadow: 0 0 20px #00ff41; margin-bottom: 8px; text-align: center;
+      background: #001100; padding: 8px; border-radius: 15px;
+      box-shadow: 0 0 30px #00ff41 inset; font-weight: 900;
+    }
+    .entry {
+      display: flex; align-items: center; margin: 8px 0; padding: 10px;
+      background: rgba(0,255,65,0.08); border: 2px solid #00ff41;
+      border-radius: 15px; position: relative; flex-shrink: 0;
+      scroll-snap-align: start;
+    }
+    .entry img {
+      width: 36px; height: 36px; border-radius: 50%; border: 2px solid #00ff41;
+      margin-right: 10px; box-shadow: 0 0 20px #00ff4188; z-index: 2;
+    }
+    .entry::before {
+      content: ''; position: absolute; top: 50%; left: 18px; transform: translate(-50%,-50%);
+      width: 28px; height: 28px; background: url('ritualnet-logo.png') center/contain no-repeat;
+      opacity: 0.18; z-index: 1; pointer-events: none; animation: ritualPulse 5s infinite ease-in-out;
+    }
+    .entry .name {
+      color: #00ff88; font-weight: bold; font-family: 'Orbitron', sans-serif;
+      font-size: 14px; text-align: left; flex: 1;
+    }
+    .entry .pledge {
+      color: #00ff88; font-size: 12px; margin-top: 2px; text-align: left; flex: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .ritual-marker img {
+      border-radius: 50%; border: 4px solid #00ff41; box-shadow: 0 0 30px #00ff41; z-index: 2;
+    }
+    .ritual-marker::after {
+      content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      width: 60%; height: 60%; background: url('ritualnet-logo.png') center/contain no-repeat;
+      opacity: 0.18; z-index: 1; pointer-events: none; animation: ritualPulse 7s infinite ease-in-out;
+    }
+
+    #resetConfirm {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: rgba(0,0,0,0.98);
+      backdrop-filter: blur(20px); display: none; align-items: center; justify-content: center;
+      flex-direction: column; z-index: 400; color: #00ff41; text-align: center; font-family: 'Orbitron', sans-serif;
+    }
+    #resetConfirm button {
+      margin: 15px; font-size: 22px; padding: 14px 50px; border-radius: 40px;
+      font-family: 'Orbitron', sans-serif; font-weight: 900; cursor: pointer;
+    }
     #confirmReset {background: #00ff41; color: #000; box-shadow: 0 0 60px #00ff41;}
     #cancelReset {background: #333; color: #00ff41; border: 2px solid #00ff41;}
-    .leaflet-popup-content-wrapper {background: #000 !important; color: #0f0 !important; border: 3px solid #00ff41 !important; border-radius: 20px !important; padding: 0 !important; box-shadow: 0 0 40px rgba(0,255,65,0.6) !important;}
-    .leaflet-popup-content {margin: 0 !important; padding: 12px !important; text-align: center !important; font-family: 'Orbitron', sans-serif !important; position: relative;}
-    .leaflet-popup-content img {width: 70px !important; height: 70px !important; border-radius: 50% !important; border: 3px solid #00ff41 !important; margin-bottom: 10px !important; box-shadow: 0 0 20px #00ff41 !important; z-index: 2;}
-    .leaflet-popup-content::before {content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; background: url('ritualnet-logo.png') center/contain no-repeat; opacity: 0.18; z-index: 1; pointer-events: none; animation: ritualPulse 6s infinite ease-in-out;}
+
+    .leaflet-popup-content-wrapper {
+      background: #000 !important; color: #0f0 !important;
+      border: 3px solid #00ff41 !important; border-radius: 20px !important;
+      padding: 0 !important; box-shadow: 0 0 40px rgba(0,255,65,0.6) !important;
+    }
+    .leaflet-popup-content {
+      margin: 0 !important; padding: 12px !important; text-align: center !important;
+      font-family: 'Orbitron', sans-serif !important; position: relative;
+    }
+    .leaflet-popup-content img {
+      width: 70px !important; height: 70px !important; border-radius: 50% !important;
+      border: 3px solid #00ff41 !important; margin-bottom: 10px !important;
+      box-shadow: 0 0 20px #00ff41 !important; z-index: 2;
+    }
+    .leaflet-popup-content::before {
+      content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 40px; height: 40px; background: url('ritualnet-logo.png') center/contain no-repeat;
+      opacity: 0.18; z-index: 1; pointer-events: none; animation: ritualPulse 6s infinite ease-in-out;
+    }
     .leaflet-popup-content b {color: #00ff41 !important; font-size: 16px !important; display: block; margin: 6px 0;}
     .leaflet-popup-content i {font-size: 13px !important; opacity: 0.9; display: block;}
     .leaflet-popup-tip {background: #00ff41 !important; box-shadow: 0 0 20px #00ff41 !important;}
-    .map-click-pulse {position: absolute; width: 60px; height: 60px; background: rgba(0,255,65,0.4); border-radius: 50%; pointer-events: none; z-index: 999; animation: clickPulse 0.8s ease-out forwards;}
+
+    .map-click-pulse {
+      position: absolute; width: 60px; height: 60px; background: rgba(0,255,65,0.4);
+      border-radius: 50%; pointer-events: none; z-index: 999;
+      animation: clickPulse 0.8s ease-out forwards;
+    }
     @keyframes clickPulse {0% {transform: scale(0); opacity: 1;}100% {transform: scale(4); opacity: 0;}}
   </style>
 </head>
@@ -110,7 +273,7 @@
   <div id="map"></div>
 
   <div class="title-bar">
-    <div id="ritualLogo"><img src="ritualnet-logo.png" alt="Ritual logo"></div>
+    <div id="ritualLogo"><img src="ritualnet-logo.png"></div>
     <div class="title-text" id="titleLink">RITUALNET</div>
   </div>
 
@@ -125,7 +288,7 @@
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
       <h2>PERFORM THE RITUAL</h2>
-      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview" alt="avatar preview"></div>
+      <div class="avatar-circle"><img src="ritualnet-logo.png" id="avatarPreview"></div>
       <label class="upload-btn">UPLOAD AVATAR</label>
       <input type="file" id="avatarInput" accept="image/*" style="display:none;">
       <input type="text" class="input-field" id="username" placeholder="X / Twitter username">
@@ -146,208 +309,208 @@
     <button id="cancelReset">CANCEL</button>
   </div>
 
-  <!-- ========== JS ========== -->
   <script>
-    // Supabase init
+    // --- Supabase init (same keys you used) ---
     const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpgv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndHRmaXFld253cHFndWhicGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTY1ODgsImV4cCI6MjA3ODc3MjU4OH0.zVK46pTGH0_Ruu20s35ep8NnsQd2ROenG_EuWezXiWg';
     const { createClient } = window.supabase;
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     window.__supabase = supabase;
 
-    // wait for load so map container has final size
+    // wait for load to reduce layout/leaflet sizing issues
     window.addEventListener('load', () => {
-      // create map after load to avoid sizing issues
-      const map = L.map('map', { zoomControl: false, attributionControl: false, minZoom: 2, maxZoom: 19 }).setView([10, 0], 2);
-      L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      // --- Map init (same as your first file) ---
+      const map = L.map('map', { 
+        zoomControl: false, 
+        attributionControl: false,
+        minZoom: 2,
+        maxZoom: 19
+      }).setView([10, 0], 2);
 
-      // ensure tile layer attempts to render and Leaflet recalculates size
+      L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
       setTimeout(() => map.invalidateSize(), 120);
       window.addEventListener('resize', () => setTimeout(() => map.invalidateSize(), 80));
-      window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 180));
+      window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 160));
 
       const markers = L.layerGroup().addTo(map);
       const recent = document.getElementById('recent');
-      let clickedPos = null, logoClicks = 0, clickTimer = null;
+      let clickedPos = null;
+      let logoClicks = 0;
+      let clickTimer = null;
 
-      function getSize() { const z = map.getZoom(); return z <= 3 ? 30 : z <= 5 ? 40 : z <= 7 ? 50 : 65; }
-      function createIconElement(src) {
+      function getSize() {
+        const z = map.getZoom();
+        if (z <= 3) return 30;
+        if (z <= 5) return 40;
+        if (z <= 7) return 50;
+        return 65;
+      }
+
+      function createIcon(src) {
         const s = getSize();
-        return `<div class="ritual-marker-inner" style="width:${s}px;height:${s}px;display:inline-block;transform:scale(0);transition:transform 360ms cubic-bezier(.2,.9,.2,1);">
-                  <img class="marker-img" src="${src}" style="width:${s}px;height:${s}px;border-radius:50%;border:4px solid #00ff41;box-shadow:0 0 30px #00ff41;">
-                </div>`;
+        return L.divIcon({
+          className: 'ritual-marker',
+          html: `<img src="${src}" style="width:${s}px;height:${s}px;">`,
+          iconSize: [s, s],
+          iconAnchor: [s/2, s/2]
+        });
       }
-      function createIcon(src) { const s = getSize(); return L.divIcon({ className: 'ritual-marker', html: createIconElement(src), iconSize: [s, s], iconAnchor: [s/2, s/2] }); }
-      map.on('zoomend', () => markers.eachLayer(m => { const data = m.options.data; if (data?.avatar) m.setIcon(createIcon(data.avatar)); }));
 
-      function validLatLng(s) { return s && s.lat != null && s.lng != null && !Number.isNaN(Number(s.lat)) && !Number.isNaN(Number(s.lng)); }
-      function animateMarkerDom(marker) {
-        try {
-          const el = marker.getElement ? marker.getElement() : marker._icon;
-          if (!el) return;
-          const inner = el.querySelector('.ritual-marker-inner');
-          if (!inner) return;
-          requestAnimationFrame(() => {
-            inner.style.transform = 'scale(1)';
-            inner.animate([{ transform: 'scale(0.92)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'cubic-bezier(.2,.9,.2,1)' });
-          });
-        } catch (e) {}
-      }
-      function showMapPulse(latlng) {
-        const p = map.latLngToContainerPoint(latlng);
-        const pulse = document.createElement('div');
-        pulse.className = 'map-click-pulse';
-        pulse.style.left = (p.x - 30) + 'px';
-        pulse.style.top = (p.y - 30) + 'px';
-        document.body.appendChild(pulse);
-        setTimeout(() => pulse.remove(), 800);
-      }
-      function isPointInView(latlng) { const bounds = map.getBounds(); return bounds.contains(L.latLng(latlng.lat, latlng.lng)); }
-      function hasEntry(id) { return !!document.querySelector(`.entry[data-id="${id}"]`); }
+      map.on('zoomend', () => {
+        markers.eachLayer(m => {
+          const data = m.options.data;
+          if (data?.avatar) m.setIcon(createIcon(data.avatar));
+        });
+      });
 
       function addSummoningToUI(s, isLocal = false, options = {}) {
         if (!s) return;
-        if (!validLatLng(s)) { console.warn('Skipping summoning — invalid coords', s); return; }
-        s.lat = Number(s.lat); s.lng = Number(s.lng);
-        if (s.id && hasEntry(s.id)) return;
+        if (!s.id && !s.timestamp) {
+          // allow temp entries without id, but ensure coords exist
+          if (!s.lat || !s.lng) return;
+        }
+        // prevent duplicates by id (if id present)
+        if (s.id && document.querySelector(`[data-id="${s.id}"]`)) return;
 
         const icon = createIcon(s.avatar || 'ritualnet-logo.png');
         const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
-        m.bindPopup(`<div style="position:relative;text-align:center;"><img src="${s.avatar || 'ritualnet-logo.png'}"><b>@${s.name}</b><i>"${s.pledge}"</i></div>`);
-        setTimeout(() => animateMarkerDom(m), 90);
+
+        m.bindPopup(`
+          <div style="position:relative;text-align:center;">
+            <img src="${s.avatar || 'ritualnet-logo.png'}">
+            <b>@${s.name}</b>
+            <i>"${s.pledge}"</i>
+          </div>
+        `);
 
         const entry = document.createElement('div');
         entry.className = 'entry';
         if (s.id) entry.dataset.id = s.id;
-        entry.innerHTML = `<img src="${s.avatar || 'ritualnet-logo.png'}"><div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>`;
-        const toTop = Boolean(options.toTop);
-        if (toTop) recent.prepend(entry); else recent.appendChild(entry);
+        entry.innerHTML = `
+          <img src="${s.avatar || 'ritualnet-logo.png'}">
+          <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
+        `;
 
-        if (isLocal) {
-          entry.style.boxShadow = '0 0 80px rgba(0,255,65,0.9)';
-          setTimeout(() => entry.style.boxShadow = '', 1200);
-        } else {
-          showMapPulse({ lat: s.lat, lng: s.lng });
-          entry.style.transform = 'scale(0.98)';
-          entry.animate([{ transform: 'scale(0.98)' }, { transform: 'scale(1.02)' }, { transform: 'scale(1)' }], { duration: 380, easing: 'cubic-bezier(.2,.9,.2,1)' });
-        }
-        if (!isLocal && !isPointInView({ lat: s.lat, lng: s.lng })) {
-          map.flyTo([s.lat, s.lng], Math.max(6, Math.min(12, map.getZoom() + 2)), { duration: 1.2 });
-        }
+        // newest on top when toTop true (used for realtime insert/broadcast)
+        if (options.toTop) recent.prepend(entry);
+        else recent.appendChild(entry);
       }
 
+      // --- fast loadAll: try cache then fresh DB (newest first) ---
       async function loadAll() {
         try {
-          // 1. Load from cache instantly
+          // quick load from local cache for instant UI
           const cached = localStorage.getItem('ritualnet_summonings');
           if (cached) {
             try {
               const parsed = JSON.parse(cached);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                markers.clearLayers(); 
-                recent.innerHTML = '';
+              if (Array.isArray(parsed) && parsed.length) {
+                markers.clearLayers(); recent.innerHTML = '';
                 parsed.forEach(s => addSummoningToUI(s, false, { toTop: false }));
-                console.log('[RITUALNET] loaded from cache', parsed.length);
               }
-            } catch (e) { console.warn('Cache parse error', e); }
-          }
-
-          // 2. Fetch fresh minimal data in background
-          const { data, error } = await window.__supabase
-            .from('summonings')
-            .select('id, name, lat, lng, avatar, pledge, timestamp')
-            .order('timestamp', { ascending: false })
-            .limit(50);
-
-          if (error) throw error;
-
-          if (data && data.length > 0) {
-            const minimal = data.map(d => ({
-              id: d.id,
-              name: d.name,
-              lat: d.lat,
-              lng: d.lng,
-              avatar: d.avatar,
-              pledge: d.pledge.length > 80 ? d.pledge.substring(0, 80) + '...' : d.pledge,
-              timestamp: d.timestamp
-            }));
-            localStorage.setItem('ritualnet_summonings', JSON.stringify(minimal));
-
-            const currentIds = new Set(Array.from(recent.children).map(el => el.dataset.id));
-            const newIds = new Set(data.map(d => d.id));
-            const hasNew = ![...newIds].every(id => currentIds.has(id)) || data.length !== currentIds.size;
-
-            if (hasNew || !cached) {
-              markers.clearLayers(); 
-              recent.innerHTML = '';
-              data.forEach(s => addSummoningToUI(s, false, { toTop: false }));
+            } catch (e) {
+              console.warn('[RITUALNET] cache parse failed', e);
             }
           }
 
-          setTimeout(() => map.invalidateSize(), 120);
+          // fetch fresh newest-first
+          const { data, error } = await window.__supabase
+            .from('summonings')
+            .select('*')
+            .order('timestamp', { ascending: false })
+            .limit(100);
+
+          if (error) { console.error(error); return; }
+
+          // store a minimal cache to avoid exceeding quota
+          try {
+            const minimal = (data || []).slice(0,50).map(d => ({
+              id: d.id, name: d.name, pledge: d.pledge, avatar: d.avatar, lat: d.lat, lng: d.lng, timestamp: d.timestamp
+            }));
+            localStorage.setItem('ritualnet_summonings', JSON.stringify(minimal));
+          } catch (e) {
+            // localStorage may quota — ignore but warn
+            console.warn('[RITUALNET] localStorage save failed', e);
+          }
+
+          // redraw UI with fresh data (newest first -> prepend would put newest at top,
+          // but data is already ordered newest->oldest, so append in order keeps newest at top if we clear first)
+          markers.clearLayers(); recent.innerHTML = '';
+          data.forEach(s => addSummoningToUI(s, false, { toTop: false }));
+
         } catch (err) {
-          console.warn('Load failed:', err);
+          console.warn('Load failed:', err && err.message ? err.message : err);
         }
       }
 
-      // Kick off fast load
-      setTimeout(loadAll, 100);
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') loadAll();
-      });
-
+      // initial load
       loadAll();
 
-      // Realtime & broadcast (keeps same logic you had)
-      let ritualChannel = null, ritualSubscribed = false, heartbeat = null, realtimeConnected = false, pollingInterval = null;
+      // --- Realtime + robust broadcasting/fallback ---
+      let ritualChannel = null;
+      let ritualSubscribed = false;
+      let heartbeat = null;
+      let realtimeConnected = false;
+      let pollingInterval = null;
+
       const isMobile = /Mobi|Android/i.test(navigator.userAgent);
       const POLL_INTERVAL_MS = isMobile ? 2000 : 1000;
 
       function connectRealtime() {
         try {
+          // cleanup previous
           ritualSubscribed = false;
-          if (ritualChannel) { try { window.__supabase.removeChannel(ritualChannel); } catch(e){} ritualChannel = null; }
+          if (ritualChannel) {
+            window.__supabase.removeChannel(ritualChannel).catch(()=>{});
+            ritualChannel = null;
+          }
           if (heartbeat) { clearInterval(heartbeat); heartbeat = null; }
 
-          ritualChannel = window.__supabase.channel('summonings-channel', { config: { broadcast: { self: false } } });
-
-          ritualChannel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, payload => {
-            const row = payload.new || payload.record || payload;
-            addSummoningToUI(row, false, { toTop: true });
-            realtimeConnected = true;
-            ritualSubscribed = true;
-            console.log('[RITUALNET] realtime INSERT', row);
-            setTimeout(() => map.invalidateSize(), 80);
+          ritualChannel = window.__supabase.channel('summonings-channel', {
+            config: { broadcast: { self: false }, presence: { key: '' } }
           });
 
-          ritualChannel.on('broadcast', { event: 'new_summon' }, (payload) => {
-            try {
+          // postgres INSERT events
+          ritualChannel
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, payload => {
+              addSummoningToUI(payload.new, false, { toTop: true });
+            });
+
+          // broadcast listener (fast path)
+          ritualChannel
+            .on('broadcast', { event: 'new_summon' }, payload => {
               if (payload && typeof payload === 'object') {
                 addSummoningToUI(payload, false, { toTop: true });
-                console.log('[RITUALNET] broadcast new_summon', payload);
-                setTimeout(() => map.invalidateSize(), 80);
               }
-            } catch (e) { console.warn('broadcast handling error', e); }
-          });
+            });
 
-          ritualChannel.subscribe((status) => {
+          ritualChannel.subscribe(status => {
             const ok = status === 'SUBSCRIBED' || (status && status.status === 'SUBSCRIBED');
-            console.log('[RITUALNET] realtime status', status);
             if (ok) {
               realtimeConnected = true;
               ritualSubscribed = true;
-              heartbeat = setInterval(() => { try { ritualChannel.send({ type: 'broadcast', event: 'ping', payload: {} }).catch(()=>{}); } catch(e){} }, 10000);
+              // heartbeat to keep connection alive & check health
+              heartbeat = setInterval(() => {
+                try { ritualChannel.send({ type: 'broadcast', event: 'ping', payload: {} }).catch(()=>{}); } catch(e){}
+              }, 10000);
+              // clear poll fallback if running
               if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
-            } else if (status === 'ERROR' || status === 'CLOSED' || /UNAUTHORIZED/i.test(String(status))) {
-              realtimeConnected = false; ritualSubscribed = false;
+            } else {
+              // start or keep polling fallback if not subscribed after a short delay
+              if (status === 'ERROR' || status === 'CLOSED' || /UNAUTHORIZED/i.test(String(status))) {
+                realtimeConnected = false;
+                ritualSubscribed = false;
+              }
             }
           });
 
+          // start polling fallback quickly if no connection
           setTimeout(() => {
             if (!realtimeConnected && !pollingInterval) {
-              pollingInterval = setInterval(() => { loadAll(); }, POLL_INTERVAL_MS);
+              pollingInterval = setInterval(() => loadAll(), POLL_INTERVAL_MS);
             }
-          }, 2000);
+          }, 1500);
+
         } catch (e) {
           console.error('[RITUALNET] connectRealtime error', e);
           if (!pollingInterval) pollingInterval = setInterval(() => loadAll(), POLL_INTERVAL_MS);
@@ -357,27 +520,36 @@
       connectRealtime();
       window.addEventListener('online', connectRealtime);
 
-      async function sendBroadcast(payload, timeoutMs = 1200) {
+      // sendBroadcast: wait briefly for subscription, fallback to temp channel send
+      async function sendBroadcast(payload, timeoutMs = 1100) {
         const waitUntil = Date.now() + timeoutMs;
-        while (!ritualSubscribed && Date.now() < waitUntil) await new Promise(r => setTimeout(r, 80));
+        while (!ritualSubscribed && Date.now() < waitUntil) {
+          await new Promise(r => setTimeout(r, 70));
+        }
+
         try {
           if (ritualSubscribed && ritualChannel && typeof ritualChannel.send === 'function') {
             await ritualChannel.send({ type: 'broadcast', event: 'new_summon', payload }).catch(err => { throw err; });
             return true;
           } else {
+            // temp channel fallback
             const tempCh = window.__supabase.channel('summonings-temp-' + Math.random().toString(36).slice(2), { config: { broadcast: { self: false } } });
             try {
               await tempCh.subscribe();
               await tempCh.send({ type: 'broadcast', event: 'new_summon', payload }).catch(err => { throw err; });
-            } finally { try { window.__supabase.removeChannel(tempCh); } catch(_) {} }
+            } finally {
+              try { window.__supabase.removeChannel(tempCh); } catch(_) {}
+            }
             return true;
           }
         } catch (err) {
+          console.warn('[RITUALNET] broadcast failed — retrying shortly', err);
           setTimeout(() => sendBroadcast(payload, 0), 300);
           return false;
         }
       }
 
+      // visibility / focus handlers (important for mobile)
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           loadAll();
@@ -389,13 +561,14 @@
       });
       window.addEventListener('focus', () => loadAll());
 
-      // Map click modal
+      // --- UI interactions (same as your original file) ---
       map.on('click', function(e) {
         clickedPos = e.latlng;
+
         const pulse = document.createElement('div');
         pulse.className = 'map-click-pulse';
         pulse.style.left = (e.containerPoint.x - 30) + 'px';
-        pulse.style.top = (p.y - 30) + 'px';
+        pulse.style.top = (e.containerPoint.y - 30) + 'px';
         document.body.appendChild(pulse);
         setTimeout(() => pulse.remove(), 800);
 
@@ -408,7 +581,11 @@
       });
 
       document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
-      const closeModal = () => { document.getElementById('ritualModal').style.display = 'none'; clickedPos = null; };
+
+      const closeModal = () => {
+        document.getElementById('ritualModal').style.display = 'none';
+        clickedPos = null;
+      };
       document.getElementById('closeBtn').onclick = closeModal;
       document.querySelector('.modal').onclick = e => { if (e.target.classList.contains('modal')) closeModal(); };
       document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
@@ -431,27 +608,25 @@
 
         const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
 
-        try {
-          const { data, error } = await window.__supabase.from('summonings').insert(newSummon).select();
-          if (error) { console.error('[RITUALNET] INSERT ERROR', error); alert('Failed to join.'); return; }
+        // Insert into DB
+        const { data, error } = await window.__supabase.from('summonings').insert(newSummon).select();
+        if (error) { console.error(error); alert('Failed to join.'); return; }
 
-          closeModal();
-          const success = document.getElementById('success');
-          success.classList.add('active');
-          setTimeout(() => {
-            success.classList.remove('active');
-            if (clickedPos && clickedPos.lat != null && clickedPos.lng != null) {
-              map.flyTo(clickedPos, 10, { duration: 1.2 });
-            }
-          }, 1100);
+        // Close modal + show success
+        closeModal();
+        const success = document.getElementById('success');
+        success.classList.add('active');
+        setTimeout(() => {
+          success.classList.remove('active');
+          map.flyTo(clickedPos, 10, { duration: 1.8 });
+        }, 3200);
 
-          const row = (data && data[0]) ? data[0] : { ...newSummon, id: `tmp-${Date.now()}` };
-          addSummoningToUI(row, true, { toTop: true });
-          sendBroadcast(row);
-        } catch (err) {
-          console.error('[RITUALNET] join error', err);
-          alert('Unexpected error. Check console.');
-        }
+        // Add locally immediately (newest at top)
+        const row = (data && data[0]) ? data[0] : { ...newSummon, id: `tmp-${Date.now()}` };
+        addSummoningToUI(row, true, { toTop: true });
+
+        // Broadcast for instant delivery to others
+        sendBroadcast(row);
       };
 
       document.getElementById('ritualLogo').onclick = () => {
@@ -466,25 +641,20 @@
       };
 
       document.getElementById('confirmReset').onclick = async () => {
-        try {
-          await window.__supabase.from('summonings').delete().neq('timestamp', 0);
-          localStorage.removeItem('ritualnet_summonings');
-          loadAll();
-          document.getElementById('resetConfirm').style.display = 'none';
-        } catch (e) {
-          console.error('[RITUALNET] reset error', e);
-          alert('Reset failed — check console.');
-        }
+        await window.__supabase.from('summonings').delete().neq('timestamp', 0);
+        localStorage.removeItem('ritualnet_summonings');
+        loadAll();
+        document.getElementById('resetConfirm').style.display = 'none';
       };
 
       document.getElementById('cancelReset').onclick = () => {
         document.getElementById('resetConfirm').style.display = 'none';
       };
 
-      // expose for console debugging
+      // expose for quick debugging
       window.__ritual = { map, markers, loadAll, connectRealtime };
-      console.log('[RITUALNET] map created and JS initialized. Open DevTools for logs.');
-    }); // end load listener
+      console.log('[RITUALNET] initialized. Open DevTools Console to see realtime / polling logs.');
+    }); // end load
   </script>
 </body>
 </html>

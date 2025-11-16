@@ -352,6 +352,16 @@
       });
     });
 
+    function createEntry(s) {
+      const entry = document.createElement('div');
+      entry.className = 'entry';
+      entry.innerHTML = `
+        <img src="${s.avatar || 'ritualnet-logo.png'}">
+        <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
+      `;
+      return entry;
+    }
+
     function addSummoningToUI(s) {
       const icon = createIcon(s.avatar || 'ritualnet-logo.png');
       const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
@@ -364,18 +374,15 @@
         </div>
       `);
 
-      const entry = document.createElement('div');
-      entry.className = 'entry';
-      entry.innerHTML = `
-        <img src="${s.avatar || 'ritualnet-logo.png'}">
-        <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
-      `;
+      const entry = createEntry(s);
 
-      // INSERT AT TOP — WORKS FOR EVERYONE
-      recent.insertBefore(entry, recent.firstChild);
+      // FORCE TOP INSERTION
+      recent.prepend(entry);
+
+      // FORCE REFLOW TO ENSURE VISUAL ORDER
+      void recent.offsetHeight;
     }
 
-    // LOAD FRESH EVERY TIME — NO CACHING
     async function loadAll() {
       const { data, error } = await window.__supabase
         .from('summonings')
@@ -386,16 +393,19 @@
       if (error) { console.error(error); return; }
 
       markers.clearLayers();
-      recent.innerHTML = '';
+      recent.innerHTML = ''; // FULL WIPE
 
-      data.forEach(s => addSummoningToUI(s));
+      // ADD IN CORRECT ORDER
+      data.forEach(s => {
+        addSummoningToUI(s);
+      });
     }
 
-    // REFRESH EVERY 5 SECONDS
+    // INITIAL LOAD + REFRESH EVERY 3 SECONDS
     loadAll();
-    setInterval(loadAll, 5000);
+    setInterval(loadAll, 3000);
 
-    // REAL-TIME INSERT → ADD AT TOP
+    // REAL-TIME: NEW SUMMONING → TOP
     window.__supabase
       .channel('summonings-channel')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, payload => {
@@ -460,7 +470,7 @@
         map.flyTo(clickedPos, 10, { duration: 1.8 });
       }, 3200);
 
-      // New summoning will appear at top via real-time
+      // Real-time will add at top
     };
 
     // 7-CLICK RESET

@@ -45,11 +45,11 @@
     .pledge-field {height: 100px; resize: none; text-align: left; padding: 20px;}
     .join-btn {margin-top: 30px; padding: 20px 80px; background: #00ff41; color: #000; border: none; border-radius: 50px; font-family: 'Orbitron', sans-serif; font-size: 28px; font-weight: 900; cursor: pointer; box-shadow: 0 0 60px #00ff41; transition: 0.4s;}
     .join-btn:hover {transform: scale(1.1); box-shadow: 0 0 100px #00ff41;}
-    .success {position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: #000; display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 300; color: #00ff41; text-align: center; opacity: 0; transition: opacity 0.6s ease; padding: 20px;}
+    .success {position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: #000; display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 300; color: #00ff41; text-align: center; opacity: 0; transition: opacity 0.3s ease; padding: 20px;}
     .success.active {display: flex; opacity: 1;}
-    .success h1 {font-family: 'Orbitron', sans-serif; font-size: clamp(48px, 12vw, 64px); text-shadow: 0 0 60px #00ff41; margin: 0; position: relative; z-index: 2; animation: fadeInUp 1.2s ease-out forwards;}
-    .success p {margin-top: 20px; font-size: clamp(16px, 4vw, 20px); opacity: 0; animation: fadeIn 1s ease 0.8s forwards; z-index: 2;}
-    .ritual-circle {position: absolute; width: 300px; height: 300px; border: 3px solid #00ff41; border-radius: 50%; box-shadow: 0 0 80px #00ff41, inset 0 0 60px #00ff41; animation: expandGlow 2.5s ease-out forwards; opacity: 0; z-index: 1; top: 50%; left: 50%; transform: translate(-50%, -50%);}
+    .success h1 {font-family: 'Orbitron', sans-serif; font-size: clamp(48px, 12vw, 64px); text-shadow: 0 0 60px #00ff41; margin: 0; position: relative; z-index: 2; animation: fadeInUp 0.8s ease-out forwards;}
+    .success p {margin-top: 20px; font-size: clamp(16px, 4vw, 20px); opacity: 0; animation: fadeIn 0.8s ease 0.6s forwards; z-index: 2;}
+    .ritual-circle {position: absolute; width: 300px; height: 300px; border: 3px solid #00ff41; border-radius: 50%; box-shadow: 0 0 80px #00ff41, inset 0 0 60px #00ff41; animation: expandGlow 1.8s ease-out forwards; opacity: 0; z-index: 1; top: 50%; left: 50%; transform: translate(-50%, -50%);}
     @keyframes expandGlow {0% {width: 0; height: 0; opacity: 1;}70% {width: 400px; height: 400px; opacity: 0.6;}100% {width: 500px; height: 500px; opacity: 0;}}
     @keyframes fadeInUp {0% {opacity: 0; transform: translateY(30px);}100% {opacity: 1; transform: translateY(0);}}
     @keyframes fadeIn {to {opacity: 0.8;}}
@@ -136,57 +136,40 @@
       const icon = createIcon(s.avatar || 'ritualnet-logo.png');
       const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
       m.bindPopup(`<div style="position:relative;text-align:center;"><img src="${s.avatar || 'ritualnet-logo.png'}"><b>@${s.name}</b><i>"${s.pledge}"</i></div>`);
+
+      // ALWAYS ADD TO TOP
       const entry = document.createElement('div');
       entry.className = 'entry';
       entry.innerHTML = `<img src="${s.avatar || 'ritualnet-logo.png'}"><div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>`;
-      recent.prepend(entry);
+      recent.prepend(entry); // <--- LATEST ON TOP
     }
 
     async function loadAll() {
-      console.log('Loading from Supabase...');
       const { data, error } = await window.__supabase.from('summonings').select('*').order('timestamp', { ascending: false }).limit(100);
-      if (error) { console.error('Load error:', error); return; }
-      console.log('Loaded', data.length, 'summonings');
+      if (error) return;
       markers.clearLayers(); recent.innerHTML = '';
       data.forEach(addSummoningToUI);
     }
 
     loadAll();
 
-    // === FINAL REALTIME: WORKS IN ALL BROWSERS ===
+    // === ULTRA-FAST REALTIME ===
     let ritualChannel = null;
-
     function connectRealtime() {
-      if (ritualChannel) {
-        window.__supabase.removeChannel(ritualChannel).catch(() => {});
-      }
-
-      ritualChannel = window.__supabase.channel('summonings-channel', {
-        config: { broadcast: { self: false } }
-      });
-
+      if (ritualChannel) window.__supabase.removeChannel(ritualChannel).catch(() => {});
+      ritualChannel = window.__supabase.channel('summonings-channel');
       ritualChannel
-        .on('postgres_changes', 
-          { event: 'INSERT', schema: 'public', table: 'summonings' }, 
-          (payload) => {
-            console.log('REALTIME INSERT:', payload.new);
-            addSummoningToUI(payload.new);
-          }
-        )
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, (payload) => {
+          addSummoningToUI(payload.new); // INSTANT
+        })
         .subscribe((status) => {
-          console.log('Realtime:', status);
-          if (status === 'SUBSCRIBED') {
-            console.log('REALTIME LIVE ACROSS BROWSERS');
-          } else if (status !== 'SUBSCRIBED') {
-            setTimeout(connectRealtime, 2000);
-          }
+          if (status !== 'SUBSCRIBED') setTimeout(connectRealtime, 1000);
         });
     }
-
     connectRealtime();
 
-    // Fallback every 10s
-    setInterval(loadAll, 10000);
+    // Fast fallback
+    setInterval(loadAll, 8000);
 
     map.on('click', function(e) {
       clickedPos = e.latlng;
@@ -225,16 +208,22 @@
       const name = document.getElementById('username').value.trim() || "ritualist";
       const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
       if (!clickedPos) return;
+
       const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
       const { data, error } = await window.__supabase.from('summonings').insert(newSummon).select();
-      if (error) { console.error(error); alert('Failed to join.'); return; }
+      if (error) { alert('Failed to join.'); return; }
+
       closeModal();
+
+      // SHOW SUCCESS IMMEDIATELY
       const success = document.getElementById('success');
       success.classList.add('active');
       setTimeout(() => {
         success.classList.remove('active');
-        map.flyTo(clickedPos, 10, { duration: 1.8 });
-      }, 3200);
+        map.flyTo(clickedPos, 10, { duration: 1.5 });
+      }, 1800); // Faster animation
+
+      // ADD TO UI INSTANTLY
       addSummoningToUI(data[0]);
     };
 

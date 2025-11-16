@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
   <title>RITUALNET</title>
 
+  <!-- Preconnect for speed -->
+  <link rel="preconnect" href="https://xgttfiqewnwpqguhbpgv.supabase.co">
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="preconnect" href="https://basemaps.cartocdn.com">
+  <link rel="dns-prefetch" href="//cartodb-basemaps-c.global.ssl.fastly.net">
+
   <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -15,7 +21,6 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
 
-    /* IMPORTANT: do NOT set html/body to position:fixed — Leaflet needs layout flow to compute sizes */
     html, body {
       margin: 0;
       padding: 0;
@@ -27,19 +32,17 @@
       overflow: hidden;
     }
 
-    /* Map must have explicit height (vh) so Leaflet can size itself reliably */
     #map {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
-      height: 100vh; /* stable across browsers */
+      height: 100vh;
       z-index: 1;
     }
 
     .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
 
-    /* (rest of your CSS unchanged) */
     .title-bar {
       position: fixed; top: 0; left: 0; right: 0; height: 110px;
       background: linear-gradient(to bottom, rgba(0,30,0,0.98), transparent);
@@ -106,6 +109,7 @@
     .leaflet-popup-tip {background: #00ff41 !important; box-shadow: 0 0 20px #00ff41 !important;}
     .map-click-pulse {position: absolute; width: 60px; height: 60px; background: rgba(0,255,65,0.4); border-radius: 50%; pointer-events: none; z-index: 999; animation: clickPulse 0.8s ease-out forwards;}
     @keyframes clickPulse {0% {transform: scale(0); opacity: 1;}100% {transform: scale(4); opacity: 0;}}
+    @keyframes pulse {0%,100%{opacity:0.3;transform:scale(1);}50%{opacity:0.7;transform:scale(1.3);}}
   </style>
 </head>
 <body>
@@ -162,39 +166,53 @@
     window.addEventListener('load', () => {
       // create map after load to avoid sizing issues
       const map = L.map('map', { zoomControl: false, attributionControl: false, minZoom: 2, maxZoom: 19 }).setView([10, 0], 2);
-      L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '',
+        subdomains: 'abcd',
+        maxZoom: 19,
+        noWrap: true
+      }).addTo(map);
 
       // ensure tile layer attempts to render and Leaflet recalculates size
       setTimeout(() => map.invalidateSize(), 120);
       window.addEventListener('resize', () => setTimeout(() => map.invalidateSize(), 80));
       window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 180));
 
-      /* ---- keep the rest of your JS (realtime, UI handlers) but adjusted to use this `map` variable ---- */
-
       const markers = L.layerGroup().addTo(map);
       const recent = document.getElementById('recent');
       let clickedPos = null, logoClicks = 0, clickTimer = null;
 
       function getSize() { const z = map.getZoom(); return z <= 3 ? 30 : z <= 5 ? 40 : z <= 7 ? 50 : 65; }
-      function createIconElement(src) {
+      function createIcon(src) {
         const s = getSize();
-        return `<div class="ritual-marker-inner" style="width:${s}px;height:${s}px;display:inline-block;transform:scale(0);transition:transform 360ms cubic-bezier(.2,.9,.2,1);">
-                  <img class="marker-img" src="${src}" style="width:${s}px;height:${s}px;border-radius:50%;border:4px solid #00ff41;box-shadow:0 0 30px #00ff41;">
-                </div>`;
+        return L.divIcon({
+          className: 'ritual-marker',
+          html: `<div style="width:${s}px;height:${s}px;">
+                   <img src="${src}" style="width:100%;height:100%;border-radius:50%;border:3px solid #00ff41;">
+                 </div>`,
+          iconSize: [s, s],
+          iconAnchor: [s/2, s/2]
+        });
       }
-      function createIcon(src) { const s = getSize(); return L.divIcon({ className: 'ritual-marker', html: createIconElement(src), iconSize: [s, s], iconAnchor: [s/2, s/2] }); }
-      map.on('zoomend', () => markers.eachLayer(m => { const data = m.options.data; if (data?.avatar) m.setIcon(createIcon(data.avatar)); }));
+      map.on('zoomend', () => markers.eachLayer(m => {
+        const data = m.options.data;
+        if (data?.avatar) m.setIcon(createIcon(data.avatar));
+      }));
 
       function validLatLng(s) { return s && s.lat != null && s.lng != null && !Number.isNaN(Number(s.lat)) && !Number.isNaN(Number(s.lng)); }
       function animateMarkerDom(marker) {
         try {
           const el = marker.getElement ? marker.getElement() : marker._icon;
           if (!el) return;
-          const inner = el.querySelector('.ritual-marker-inner');
-          if (!inner) return;
+          const img = el.querySelector('img');
+          if (!img) return;
           requestAnimationFrame(() => {
-            inner.style.transform = 'scale(1)';
-            inner.animate([{ transform: 'scale(0.92)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'cubic-bezier(.2,.9,.2,1)' });
+            img.style.transform = 'scale(0.92)';
+            setTimeout(() => {
+              img.style.transition = 'transform 420ms cubic-bezier(.2,.9,.2,1)';
+              img.style.transform = 'scale(1.06)';
+              setTimeout(() => img.style.transform = 'scale(1)', 210);
+            }, 16);
           });
         } catch (e) {}
       }
@@ -211,57 +229,129 @@
       function hasEntry(id) { return !!document.querySelector(`.entry[data-id="${id}"]`); }
 
       function addSummoningToUI(s, isLocal = false, options = {}) {
-        if (!s) return;
-        if (!validLatLng(s)) { console.warn('Skipping summoning — invalid coords', s); return; }
-        s.lat = Number(s.lat); s.lng = Number(s.lng);
+        if (!s || !validLatLng(s)) return;
         if (s.id && hasEntry(s.id)) return;
+
+        s.lat = Number(s.lat); s.lng = Number(s.lng);
 
         const icon = createIcon(s.avatar || 'ritualnet-logo.png');
         const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
-        m.bindPopup(`<div style="position:relative;text-align:center;"><img src="${s.avatar || 'ritualnet-logo.png'}"><b>@${s.name}</b><i>"${s.pledge}"</i></div>`);
-        setTimeout(() => animateMarkerDom(m), 90);
+        m.bindPopup(`<div style="text-align:center;"><img src="${s.avatar || 'ritualnet-logo.png'}"><b>@${s.name}</b><i>"${s.pledge}"</i></div>`);
+
+        setTimeout(() => animateMarkerDom(m), 50 + Math.random() * 100);
 
         const entry = document.createElement('div');
         entry.className = 'entry';
         if (s.id) entry.dataset.id = s.id;
-        entry.innerHTML = `<img src="${s.avatar || 'ritualnet-logo.png'}"><div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>`;
-        const toTop = Boolean(options.toTop);
-        if (toTop) recent.prepend(entry); else recent.appendChild(entry);
+        entry.innerHTML = `
+          <img src="${s.avatar || 'ritualnet-logo.png'}">
+          <div>
+            <div class="name">@${s.name}</div>
+            <div class="pledge">"${s.pledge}"</div>
+          </div>
+        `;
+
+        if (options.toTop) {
+          recent.prepend(entry);
+        } else {
+          recent.appendChild(entry);
+        }
+
+        if (!isLocal && options.toTop !== true) {
+          entry.style.opacity = '0';
+          entry.style.transform = 'translateY(8px)';
+          requestAnimationFrame(() => {
+            entry.style.transition = 'all 300ms ease';
+            entry.style.opacity = '1';
+            entry.style.transform = 'translateY(0)';
+          });
+        }
 
         if (isLocal) {
           entry.style.boxShadow = '0 0 80px rgba(0,255,65,0.9)';
           setTimeout(() => entry.style.boxShadow = '', 1200);
-        } else {
-          showMapPulse({ lat: s.lat, lng: s.lng });
-          entry.style.transform = 'scale(0.98)';
-          entry.animate([{ transform: 'scale(0.98)' }, { transform: 'scale(1.02)' }, { transform: 'scale(1)' }], { duration: 380, easing: 'cubic-bezier(.2,.9,.2,1)' });
-        }
-        if (!isLocal && !isPointInView({ lat: s.lat, lng: s.lng })) {
+        } else if (!isPointInView({ lat: s.lat, lng: s.lng })) {
           map.flyTo([s.lat, s.lng], Math.max(6, Math.min(12, map.getZoom() + 2)), { duration: 1.2 });
         }
       }
 
       async function loadAll() {
         try {
-          const { data, error } = await window.__supabase.from('summonings').select('*').order('timestamp', { ascending: false }).limit(100);
-          if (error) { console.error(error); return; }
-          try {
-            const minimal = (data || []).slice(0,50).map(d => ({ id: d.id, name: d.name, lat: d.lat, lng: d.lng, timestamp: d.timestamp }));
+          // 1. Load from cache instantly
+          const cached = localStorage.getItem('ritualnet_summonings');
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                markers.clearLayers(); 
+                recent.innerHTML = '';
+                parsed.forEach(s => addSummoningToUI(s, false, { toTop: false }));
+                console.log('[RITUALNET] loaded from cache', parsed.length);
+              }
+            } catch (e) { console.warn('Cache parse error', e); }
+          }
+
+          // 2. Fetch fresh data in background
+          const { data, error } = await window.__supabase
+            .from('summonings')
+            .select('id, name, lat, lng, avatar, pledge, timestamp')
+            .order('timestamp', { ascending: false })
+            .limit(50);
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            const minimal = data.map(d => ({
+              id: d.id,
+              name: d.name,
+              lat: d.lat,
+              lng: d.lng,
+              avatar: d.avatar,
+              pledge: d.pledge.length > 80 ? d.pledge.substring(0, 80) + '...' : d.pledge,
+              timestamp: d.timestamp
+            }));
             localStorage.setItem('ritualnet_summonings', JSON.stringify(minimal));
-          } catch (e) {}
-          markers.clearLayers(); recent.innerHTML = '';
-          (data || []).forEach(s => addSummoningToUI(s, false, { toTop: false }));
-          console.log('[RITUALNET] loaded', (data||[]).length);
-          // ensure map redraw after adding markers (fix mobile quirks)
+
+            const currentIds = new Set(Array.from(recent.children).map(el => el.dataset.id));
+            const newIds = new Set(data.map(d => d.id));
+            const hasNew = ![...newIds].every(id => currentIds.has(id)) || data.length !== currentIds.size;
+
+            if (hasNew || !cached) {
+              markers.clearLayers(); 
+              recent.innerHTML = '';
+              data.forEach(s => addSummoningToUI(s, false, { toTop: false }));
+            }
+          }
+
           setTimeout(() => map.invalidateSize(), 120);
         } catch (err) {
-          console.warn('Load failed:', err && err.message ? err.message : err);
+          console.warn('Load failed:', err);
         }
       }
 
-      loadAll();
+      // Show placeholder markers immediately
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+          const lat = 20 + Math.random() * 40 - 20;
+          const lng = Math.random() * 360 - 180;
+          const placeholder = L.marker([lat, lng], {
+            icon: L.divIcon({
+              className: 'ritual-marker',
+              html: `<div style="width:40px;height:40px;background:#00ff41;border-radius:50%;opacity:0.3;animation:pulse 1.5s infinite;"></div>`,
+              iconSize: [40, 40]
+            })
+          }).addTo(markers);
+          setTimeout(() => markers.removeLayer(placeholder), 3000);
+        }, i * 300);
+      }
 
-      // Realtime & broadcast (keeps same logic you had)
+      // Kick off fast load
+      setTimeout(loadAll, 100);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') loadAll();
+      });
+
+      // Realtime & broadcast
       let ritualChannel = null, ritualSubscribed = false, heartbeat = null, realtimeConnected = false, pollingInterval = null;
       const isMobile = /Mobi|Android/i.test(navigator.userAgent);
       const POLL_INTERVAL_MS = isMobile ? 2000 : 1000;
@@ -279,7 +369,6 @@
             addSummoningToUI(row, false, { toTop: true });
             realtimeConnected = true;
             ritualSubscribed = true;
-            console.log('[RITUALNET] realtime INSERT', row);
             setTimeout(() => map.invalidateSize(), 80);
           });
 
@@ -287,7 +376,6 @@
             try {
               if (payload && typeof payload === 'object') {
                 addSummoningToUI(payload, false, { toTop: true });
-                console.log('[RITUALNET] broadcast new_summon', payload);
                 setTimeout(() => map.invalidateSize(), 80);
               }
             } catch (e) { console.warn('broadcast handling error', e); }
@@ -295,7 +383,6 @@
 
           ritualChannel.subscribe((status) => {
             const ok = status === 'SUBSCRIBED' || (status && status.status === 'SUBSCRIBED');
-            console.log('[RITUALNET] realtime status', status);
             if (ok) {
               realtimeConnected = true;
               ritualSubscribed = true;

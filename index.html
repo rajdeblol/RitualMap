@@ -322,7 +322,7 @@
     <button id="cancelReset">CANCEL</button>
   </div>
 
-  <!-- ===== merged JS: database & realtime from your 2nd sample, with defensive guards ===== -->
+  <!-- ===== merged JS: optimistic broadcast + realtime + instant UI + newest-on-top ===== -->
   <script>
     const map = L.map('map', { zoomControl: false, attributionControl: false, minZoom: 2, maxZoom: 19 }).setView([10, 0], 2);
     L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -404,6 +404,8 @@
       entry.className = 'entry';
       if (s.id) entry.dataset.id = s.id;
       entry.innerHTML = `<img src="${s.avatar || 'ritualnet-logo.png'}"><div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>`;
+
+      // newest on top for everyone
       recent.prepend(entry);
 
       if (isLocal) {
@@ -448,7 +450,7 @@
 
     loadAll();
 
-    // Realtime with heartbeat & polling fallback
+    // Realtime with heartbeat, broadcast listener & polling fallback (1s)
     let ritualChannel = null;
     let heartbeat = null;
     let realtimeConnected = false;
@@ -464,33 +466,44 @@
 
         ritualChannel = window.__supabase.channel('summonings-channel', { config: { broadcast: { self: false } } });
 
-        ritualChannel
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, payload => {
-            const row = payload.new || payload.record || payload;
-            addSummoningToUI(row, false);
-            realtimeConnected = true;
-            console.log('[RITUALNET] realtime insert event', row);
-          })
-          .subscribe((status) => {
-            console.log('[RITUALNET] realtime status', status);
-            if (status === 'SUBSCRIBED' || (status && status.status === 'SUBSCRIBED')) {
-              realtimeConnected = true;
-              heartbeat = setInterval(() => { try { ritualChannel.send({ type: 'broadcast', event: 'ping', payload: {} }).catch(()=>{}); } catch(e){} }, 10000);
-              if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
-            } else if (status === 'CLOSED' || status === 'ERROR' || /UNAUTHORIZED/i.test(String(status))) {
-              realtimeConnected = false;
+        // DB INSERT events
+        ritualChannel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, payload => {
+          const row = payload.new || payload.record || payload;
+          addSummoningToUI(row, false);
+          realtimeConnected = true;
+          console.log('[RITUALNET] realtime insert event', row);
+        });
+
+        // FAST BROADCAST: other clients' broadcasts for instant UI
+        ritualChannel.on('broadcast', { event: 'new_summon' }, (payload) => {
+          try {
+            if (payload && typeof payload === 'object') {
+              addSummoningToUI(payload, false);
+              console.log('[RITUALNET] broadcast new_summon received', payload);
             }
-          });
+          } catch (e) { console.warn('broadcast handling error', e); }
+        });
+
+        ritualChannel.subscribe((status) => {
+          console.log('[RITUALNET] realtime status', status);
+          if (status === 'SUBSCRIBED' || (status && status.status === 'SUBSCRIBED')) {
+            realtimeConnected = true;
+            heartbeat = setInterval(() => { try { ritualChannel.send({ type: 'broadcast', event: 'ping', payload: {} }).catch(()=>{}); } catch(e){} }, 10000);
+            if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+          } else if (status === 'CLOSED' || status === 'ERROR' || /UNAUTHORIZED/i.test(String(status))) {
+            realtimeConnected = false;
+          }
+        });
 
         setTimeout(() => {
           if (!realtimeConnected && !pollingInterval) {
-            console.warn('[RITUALNET] realtime not connected — starting polling fallback');
-            pollingInterval = setInterval(() => { loadAll(); }, 6000);
+            console.warn('[RITUALNET] realtime not connected — starting polling fallback (1s)');
+            pollingInterval = setInterval(() => { loadAll(); }, 1000);
           }
-        }, 3500);
+        }, 2500);
       } catch (e) {
         console.error('[RITUALNET] connectRealtime error', e);
-        if (!pollingInterval) pollingInterval = setInterval(() => loadAll(), 6000);
+        if (!pollingInterval) pollingInterval = setInterval(() => loadAll(), 1000);
       }
     }
 
@@ -533,7 +546,7 @@
       }
     };
 
-    // Join button insert -> immediate add + success
+    // Join button: insert -> immediate add + broadcast
     document.querySelector('.join-btn').onclick = async () => {
       const avatar = document.getElementById('avatarPreview').src;
       const name = document.getElementById('username').value.trim() || "ritualist";
@@ -554,10 +567,27 @@
           if (clickedPos && clickedPos.lat != null && clickedPos.lng != null) {
             map.flyTo(clickedPos, 10, { duration: 1.5 });
           }
-        }, 1800);
+        }, 1200);
 
-        if (data && data[0]) addSummoningToUI(data[0], true);
-        else addSummoningToUI({ ...newSummon, id: `tmp-${Date.now()}` }, true);
+        const row = (data && data[0]) ? data[0] : { ...newSummon, id: `tmp-${Date.now()}` };
+        // add locally immediately (so the user sees it)
+        addSummoningToUI(row, true);
+
+        // send a fast broadcast so other clients see it instantly
+        try {
+          if (ritualChannel) {
+            ritualChannel.send({
+              type: 'broadcast',
+              event: 'new_summon',
+              payload: row
+            }).catch(err => {
+              console.warn('[RITUALNET] broadcast send failed', err);
+            });
+          }
+        } catch (e) {
+          console.warn('[RITUALNET] broadcast error', e);
+        }
+
       } catch (err) {
         console.error('[RITUALNET] join error', err);
         alert('Unexpected error. Check console.');

@@ -23,7 +23,7 @@
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
     *{margin:0;padding:0;box-sizing:border-box;}
     
-    /* FULL SCREEN — NO WHITE BARS ANYWHERE */
+    /* MOBILE FULL SCREEN — NO WHITE BARS */
     html, body {
       margin:0;
       padding:0;
@@ -34,23 +34,22 @@
       font-family:'Rajdhani',sans-serif;
       color:#0f0;
       touch-action: manipulation;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
     #map{
-      position:fixed;
+      position:absolute;
       top:0; left:0; width:100%; height:100dvh;
       z-index:1;
     }
     .leaflet-control-zoom, .leaflet-control-attribution{display:none!important;}
 
-    /* TITLE BAR — FIXED AT TOP */
+    /* TITLE BAR */
     .title-bar{
-      position:fixed;
-      top:0; left:0; right:0;
-      height:110px;
+      position:absolute;top:0;left:0;right:0;height:110px;
       background:linear-gradient(to bottom,rgba(0,30,0,0.98),transparent);
-      display:flex;align-items:center;justify-content:center;gap:25px;
-      z-index:100;user-select:none;
+      display:flex;align-items:center;justify-content:center;gap:25px;z-index:100;user-select:none;
       padding-top: env(safe-area-inset-top);
     }
     #ritualLogo{
@@ -83,9 +82,7 @@
     }
 
     .subtitle{
-      position:fixed;
-      top:calc(110px + env(safe-area-inset-top));
-      left:50%;transform:translateX(-50%);
+      position:absolute;top:100px;left:50%;transform:translateX(-50%);
       font-size:16px;letter-spacing:2px;color:#00ff88;
       text-shadow:0 0 20px #00ff41;font-family:'Orbitron',sans-serif;
       white-space:nowrap;z-index:100;
@@ -104,7 +101,6 @@
       display:none;align-items:center;justify-content:center;
       z-index:200;padding:20px;overflow-y:auto;
       -webkit-overflow-scrolling: touch;
-      padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
     }
     .card{
@@ -181,12 +177,12 @@
     }
     @keyframes fadeIn{to{opacity:0.8;}}
 
-    /* PANEL — SCROLLABLE, SHOWS 3 BY DEFAULT */
+    /* PANEL — ONLY 3 VISIBLE, SCROLLABLE */
     .panel{
-      position:fixed;
+      position:absolute;
       left:20px; bottom:20px;
       width:380px; max-width:calc(100vw - 40px);
-      max-height:calc(70dvh - env(safe-area-inset-bottom));
+      max-height:70vh;
       background:#000;
       border:3px solid #00ff41;
       border-radius:25px;
@@ -289,7 +285,7 @@
 
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
-  <!-- PANEL: SCROLLABLE, SHOWS 3 BY DEFAULT -->
+  <!-- PANEL: ONLY 3 VISIBLE -->
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent" style="scroll-snap-type: y mandatory;"></div>
@@ -361,7 +357,7 @@
       });
     });
 
-    // ADD TO UI (NEWEST ON TOP)
+    // ADD TO UI
     function addSummoningToUI(s) {
       const icon = createIcon(s.avatar || 'ritualnet-logo.png');
       const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
@@ -381,6 +377,11 @@
         <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
       `;
       recent.prepend(entry); // NEWEST ON TOP
+
+      // KEEP ONLY LATEST 3
+      while (recent.children.length > 3) {
+        recent.removeChild(recent.lastChild);
+      }
     }
 
     async function loadAll() {
@@ -390,12 +391,12 @@
       localStorage.setItem('ritualnet_summonings', JSON.stringify(data));
       markers.clearLayers(); recent.innerHTML = '';
 
-      data.forEach(s => addSummoningToUI(s)); // SHOW ALL, SCROLLABLE
+      data.slice(0, 3).forEach(s => addSummoningToUI(s)); // SHOW ONLY 3
     }
 
     loadAll();
 
-    // REALTIME: NEW → ADD TO TOP
+    // REALTIME: NEW → ADD TO TOP (KEEP 3)
     window.__supabase
       .channel('summonings-channel')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, payload => {

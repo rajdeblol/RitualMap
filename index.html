@@ -535,7 +535,7 @@
         }
       };
 
-      document.querySelector('.join-btn').onclick = async () => {
+      document.querySelector('.join-btn').onclick = () => {
         const avatar = document.getElementById('avatarPreview').src;
         const name = document.getElementById('username').value.trim() || "ritualist";
         const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
@@ -552,26 +552,24 @@
           timestamp: Date.now() 
         };
 
-        // INSTANT: Add to UI immediately (0ms delay)
-        addMarkerToMap(newSummon);
+        // INSTANT: Add marker and entry with NO delay
+        const marker = addMarkerToMap(newSummon);
         addToRecent(newSummon, true);
 
-        // Close modal and show success immediately
+        // Close modal immediately
         closeModal();
         
-        // Show success animation
+        // Show success animation instantly
         const success = document.getElementById('success');
         success.classList.add('active');
         
-        // Fly to location
-        setTimeout(() => {
-          map.flyTo(clickedPos, 10, { duration: 0.8 });
-        }, 100);
+        // Fly to location immediately
+        map.flyTo(clickedPos, 10, { duration: 0.6 });
 
-        // Hide success after 1.2s
-        setTimeout(() => success.classList.remove('active'), 1200);
+        // Hide success after 1s
+        setTimeout(() => success.classList.remove('active'), 1000);
 
-        // Background: Save to database (no await, fire and forget)
+        // Save to database in background (fire and forget, no await)
         supabase.from('summonings')
           .insert({
             name, 
@@ -586,12 +584,17 @@
             if (error) {
               console.warn('Save error:', error);
             } else if (data && data[0]) {
-              // Update temp entry with real ID
+              // Update marker and entry with real ID
+              marker.options.data.id = data[0].id;
               const tempEntry = document.querySelector(`.entry[data-id="${tempId}"]`);
               if (tempEntry) {
                 tempEntry.dataset.id = data[0].id;
               }
+              console.log('✅ Saved to database:', data[0].id);
             }
+          })
+          .catch(err => {
+            console.error('Database save failed:', err);
           });
       };
 

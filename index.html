@@ -23,7 +23,7 @@
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
     *, *::before, *::after {margin:0;padding:0;box-sizing:border-box;}
     
-    /* FULL IMMERSIVE — NO WHITE BARS */
+    /* FULL IMMERSIVE */
     html, body {
       margin: 0; padding: 0; background: #000; overflow: hidden;
       height: 100dvh; width: 100vw; font-family: 'Rajdhani', sans-serif;
@@ -35,17 +35,18 @@
     }
     .leaflet-control-zoom, .leaflet-control-attribution {display: none !important;}
 
-    /* TITLE BAR */
+    /* TITLE BAR — RESPONSIVE TEXT */
     .title-bar {
       position: fixed; top: 0; left: 0; right: 0; height: 110px;
       background: linear-gradient(to bottom, rgba(0,30,0,0.98), transparent);
-      display: flex; align-items: center; justify-content: center; gap: 25px;
+      display: flex; align-items: center; justify-content: center; gap: 15px;
       z-index: 100; user-select: none; padding-top: env(safe-area-inset-top);
+      flex-wrap: wrap; padding: 10px;
     }
     #ritualLogo {
-      width: 82px; height: 82px; cursor: pointer;
+      width: 70px; height: 70px; cursor: pointer;
       filter: drop-shadow(0 0 40px #00ff41); animation: glow 5s infinite alternate;
-      transition: 0.3s; position: relative;
+      transition: 0.3s; position: relative; flex-shrink: 0;
     }
     #ritualLogo img {width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 2;}
     #ritualLogo::before {
@@ -56,15 +57,16 @@
     #ritualLogo:hover {transform: scale(1.25);}
 
     .title-text {
-      font-family: 'Orbitron', sans-serif; font-size: 56px; font-weight: 900;
+      font-family: 'Orbitron', sans-serif; font-weight: 900;
       background: linear-gradient(90deg, #00ff41, #00ff99);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 60px #00ff4188; letter-spacing: 12px; cursor: pointer;
-      position: relative;
+      text-shadow: 0 0 60px #00ff4188; letter-spacing: 8px; cursor: pointer;
+      position: relative; font-size: clamp(36px, 8vw, 56px); /* Responsive */
+      white-space: nowrap; text-align: center;
     }
     .title-text::before {
       content: 'RITUALNET'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-      font-size: 56px; letter-spacing: 12px; opacity: 0.18;
+      font-size: inherit; letter-spacing: 8px; opacity: 0.18;
       background: linear-gradient(90deg, #00ff41, #00ff99);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       animation: ritualPulse 6s infinite ease-in-out; z-index: -1;
@@ -73,7 +75,7 @@
     .subtitle {
       position: fixed; top: calc(110px + env(safe-area-inset-top));
       left: 50%; transform: translateX(-50%);
-      font-size: 16px; letter-spacing: 2px; color: #00ff88;
+      font-size: 14px; letter-spacing: 2px; color: #00ff88;
       text-shadow: 0 0 20px #00ff41; font-family: 'Orbitron', sans-serif;
       white-space: nowrap; z-index: 100;
     }
@@ -127,7 +129,7 @@
       font-size: 18px; text-align: center; cursor: pointer; transition: 0.3s;
     }
     .upload-btn:hover, .input-field:focus, .pledge-field:focus {
-      background: #002200; border-style: solid; outline: none;
+      background: # P002200; border-style: solid; outline: none;
     }
     .pledge-field {height: 100px; resize: none; text-align: left; padding: 20px;}
     .join-btn {
@@ -138,32 +140,49 @@
     }
     .join-btn:hover {transform: scale(1.1); box-shadow: 0 0 100px #00ff41;}
 
+    /* SUCCESS — CENTERED, SMOOTH */
     .success {
       position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: #000;
       display: none; align-items: center; justify-content: center; flex-direction: column;
-      z-index: 300; color: #00ff41; text-align: center; opacity: 0; transition: opacity 0.6s ease;
+      z-index: 300; color: #00ff41; text-align: center; opacity: 0;
+      transition: opacity 0.6s ease; padding: 20px;
     }
-    .success.active {display: flex; opacity: 1;}
+    .success.active {
+      display: flex; opacity: 1;
+    }
 
     .success h1 {
-      font-family: 'Orbitron', sans-serif; font-size: 64px; text-shadow: 0 0 60px #00ff41;
-      animation: ritualPulse 2s ease-out; z-index: 2;
+      font-family: 'Orbitron', sans-serif; font-size: clamp(48px, 12vw, 64px);
+      text-shadow: 0 0 60px #00ff41; margin: 0; position: relative; z-index: 2;
+      animation: fadeInUp 1.2s ease-out forwards;
     }
-    .success p {margin-top: 20px; font-size: 20px; opacity: 0; animation: fadeIn 1s ease 0.5s forwards;}
+    .success p {
+      margin-top: 20px; font-size: clamp(16px, 4vw, 20px); opacity: 0;
+      animation: fadeIn 1s ease 0.8s forwards; z-index: 2;
+    }
     .ritual-circle {
       position: absolute; width: 300px; height: 300px; border: 3px solid #00ff41;
       border-radius: 50%; box-shadow: 0 0 80px #00ff41, inset 0 0 60px #00ff41;
       animation: expandGlow 2.5s ease-out forwards; opacity: 0; z-index: 1;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
     }
-    @keyframes expandGlow {0%{width:0;height:0;opacity:1;}70%{width:400px;height:400px;opacity:0.6;}100%{width:500px;height:500px;opacity:0;}}
-    @keyframes fadeIn {to{opacity:0.8;}}
+    @keyframes expandGlow {
+      0% {width: 0; height: 0; opacity: 1;}
+      70% {width: 400px; height: 400px; opacity: 0.6;}
+      100% {width: 500px; height: 500px; opacity: 0;}
+    }
+    @keyframes fadeInUp {
+      0% {opacity: 0; transform: translateY(30px);}
+      100% {opacity: 1; transform: translateY(0);}
+    }
+    @keyframes fadeIn {to {opacity: 0.8;}}
 
-    /* PANEL — SMALL, MOBILE-FRIENDLY, TOP 3 + SCROLLABLE */
+    /* PANEL — SMALL & MOBILE-FRIENDLY */
     .panel {
       position: fixed;
       left: 15px; bottom: 15px;
       width: 300px; max-width: calc(100vw - 30px);
-      max-height: 240px; /* ~3 entries + header */
+      max-height: 240px;
       background: #000;
       border: 3px solid #00ff41;
       border-radius: 20px;
@@ -269,7 +288,6 @@
 
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
-  <!-- PANEL: SMALL, TOP 3 + SCROLLABLE -->
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent" style="scroll-snap-type: y mandatory;"></div>
@@ -283,7 +301,7 @@
       <label class="upload-btn">UPLOAD AVATAR</label>
       <input type="file" id="avatarInput" accept="image/*" style="display:none;">
       <input type="text" class="input-field" id="username" placeholder="X / Twitter username">
-      <textarea class="pledge-field input-field" id="pledge" placeholder="Speak your pledge..."></textarea>
+      <textarea class="pledge-field input-field" id="pledge" placeholder="Write your pledge..."></textarea>
       <button class="join-btn">JOIN THE CIRCLE</button>
     </div>
   </div>
@@ -359,7 +377,7 @@
         <img src="${s.avatar || 'ritualnet-logo.png'}">
         <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
       `;
-      recent.prepend(entry); // Newest on top
+      recent.prepend(entry);
     }
 
     async function loadAll() {
@@ -369,7 +387,7 @@
       localStorage.setItem('ritualnet_summonings', JSON.stringify(data));
       markers.clearLayers(); recent.innerHTML = '';
 
-      data.forEach(s => addSummoningToUI(s)); // All loaded, top 3 visible
+      data.forEach(s => addSummoningToUI(s));
     }
 
     loadAll();

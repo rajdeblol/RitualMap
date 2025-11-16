@@ -133,7 +133,6 @@
 
     map.on('zoomend', () => markers.eachLayer(m => m.options.data?.avatar && m.setIcon(createIcon(m.options.data.avatar))));
 
-    // === GLOBAL INSTANT ADD (TOP FOR EVERYONE) ===
     function addSummoningToUI(s, isLocal = false) {
       if (!isLocal && document.querySelector(`[data-id="${s.id}"]`)) return;
 
@@ -146,34 +145,57 @@
       entry.dataset.id = s.id;
       entry.innerHTML = `<img src="${s.avatar || 'ritualnet-logo.png'}"><div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>`;
 
-      recent.insertBefore(entry, recent.firstChild); // TOP FOR ALL
+      recent.insertBefore(entry, recent.firstChild);
     }
 
     async function loadAll() {
-      const { data, error } = await window.__supabase.from('summonings').select('*').order('timestamp', { ascending: false }).limit(100);
-      if (error) return;
-      markers.clearLayers(); recent.innerHTML = '';
-      data.forEach(s => addSummoningToUI(s));
+      try {
+        const { data, error } = await window.__supabase
+          .from('summonings')
+          .select('id,name,pledge,avatar,lat,lng,timestamp')
+          .order('timestamp', { ascending: false })
+          .limit(100);
+        if (error) throw error;
+        markers.clearLayers(); recent.innerHTML = '';
+        data.forEach(s => addSummoningToUI(s));
+      } catch (err) {
+        console.warn('Load failed:', err.message);
+      }
     }
 
     loadAll();
 
-    // === ULTRA-FAST REALTIME ===
+    // === INSTANT REALTIME: HEARTBEAT + RECONNECT ===
     let ritualChannel = null;
+    let heartbeat = null;
+
     function connectRealtime() {
-      if (ritualChannel) window.__supabase.removeChannel(ritualChannel).catch(() => {});
-      ritualChannel = window.__supabase.channel('summonings-channel');
+      if (ritualChannel) {
+        window.__supabase.removeChannel(ritualChannel).catch(() => {});
+        clearInterval(heartbeat);
+      }
+
+      ritualChannel = window.__supabase.channel('summonings-channel', {
+        config: { broadcast: { self: false }, presence: { key: '' } }
+      });
+
       ritualChannel
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, (payload) => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, payload => {
           addSummoningToUI(payload.new);
         })
-        .subscribe((status) => {
-          if (status !== 'SUBSCRIBED') setTimeout(connectRealtime, 1000);
+        .subscribe(status => {
+          if (status === 'SUBSCRIBED') {
+            heartbeat = setInterval(() => {
+              ritualChannel.send({ type: 'broadcast', event: 'ping', payload: {} }).catch(() => {});
+            }, 10000);
+          } else {
+            setTimeout(connectRealtime, 1000);
+          }
         });
     }
-    connectRealtime();
 
-    setInterval(loadAll, 7000); // Fallback
+    connectRealtime();
+    window.addEventListener('online', connectRealtime);
 
     map.on('click', function(e) {
       clickedPos = e.latlng;
@@ -225,7 +247,7 @@
         map.flyTo(clickedPos, 10, { duration: 1.5 });
       }, 1800);
 
-      addSummoningToUI(data[0], true); // Local instant
+      addSummoningToUI(data[0], true);
     };
 
     document.getElementById('ritualLogo').onclick = () => {

@@ -186,11 +186,11 @@
       display: flex; align-items: center; margin: 8px 0; padding: 10px;
       background: rgba(0,255,65,0.08); border: 2px solid #00ff41;
       border-radius: 15px; position: relative; flex-shrink: 0; scroll-snap-align: start;
-      animation: slideIn 0.3s ease-out;
+      animation: slideIn 0.2s ease-out;
     }
     @keyframes slideIn {
-      from {opacity: 0; transform: translateX(-20px);}
-      to {opacity: 1; transform: translateX(0);}
+      from {opacity: 0; transform: translateY(-10px);}
+      to {opacity: 1; transform: translateY(0);}
     }
     .entry img {
       width: 36px; height: 36px; border-radius: 50%; border: 2px solid #00ff41;
@@ -211,7 +211,7 @@
     }
 
     .ritual-marker {
-      animation: markerAppear 0.3s ease-out;
+      animation: markerAppear 0.2s ease-out;
     }
     .ritual-marker img {
       border-radius: 50%; border: 4px solid #00ff41; box-shadow: 0 0 30px #00ff41; z-index: 2;
@@ -222,9 +222,9 @@
       opacity: 0.18; z-index: 1; pointer-events: none; animation: ritualPulse 7s infinite ease-in-out;
     }
     @keyframes markerAppear {
-      0% {transform: scale(0) rotate(180deg); opacity: 0;}
-      60% {transform: scale(1.2) rotate(0deg);}
-      100% {transform: scale(1) rotate(0deg); opacity: 1;}
+      0% {transform: scale(0); opacity: 0;}
+      70% {transform: scale(1.15);}
+      100% {transform: scale(1); opacity: 1;}
     }
 
     #resetConfirm {
@@ -462,21 +462,64 @@
       }
 
       async function loadAll() {
+        // INSTANT: Try to show cached data immediately (0ms)
         try {
-          const { data } = await supabase
+          const cached = localStorage.getItem('ritualnet_cache');
+          if (cached) {
+            const cachedData = JSON.parse(cached);
+            if (cachedData && cachedData.data && Array.isArray(cachedData.data)) {
+              console.log('📦 Loading from cache:', cachedData.data.length, 'markers');
+              cachedData.data.forEach(s => {
+                addMarkerToMap(s);
+                addToRecent(s, false);
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Cache load failed:', e);
+        }
+
+        // BACKGROUND: Fetch fresh data without blocking
+        try {
+          const { data, error } = await supabase
             .from('summonings')
             .select('*')
             .order('timestamp', { ascending: false })
-            .limit(50);
+            .limit(100);
+          
+          if (error) throw error;
           
           if (data && data.length > 0) {
-            markers.clearLayers();
-            recent.innerHTML = '';
-            // Add in order (newest first)
-            data.forEach(s => {
-              addMarkerToMap(s);
-              addToRecent(s, false); // Don't prepend during initial load
+            console.log('🔄 Fresh data loaded:', data.length, 'markers');
+            
+            // Update cache
+            try {
+              localStorage.setItem('ritualnet_cache', JSON.stringify({ 
+                data: data.slice(0, 50),
+                timestamp: Date.now() 
+              }));
+            } catch (e) {
+              console.warn('Cache save failed:', e);
+            }
+            
+            // Only update if data actually changed
+            const existingIds = new Set();
+            markers.eachLayer(m => {
+              if (m.options.data?.id) existingIds.add(m.options.data.id);
             });
+            
+            const hasChanges = data.some(s => !existingIds.has(s.id)) || 
+                               data.length !== existingIds.size;
+            
+            if (hasChanges) {
+              console.log('🔄 Data changed, refreshing UI');
+              markers.clearLayers();
+              recent.innerHTML = '';
+              data.forEach(s => {
+                addMarkerToMap(s);
+                addToRecent(s, false);
+              });
+            }
           }
         } catch (e) {
           console.warn('Load error:', e);

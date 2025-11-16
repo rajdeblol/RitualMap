@@ -263,6 +263,27 @@
     .leaflet-popup-content b {color: #00ff41 !important; font-size: 16px !important; display: block; margin: 6px 0;}
     .leaflet-popup-content i {font-size: 13px !important; opacity: 0.9; display: block;}
     .leaflet-popup-tip {background: #00ff41 !important; box-shadow: 0 0 20px #00ff41 !important;}
+    
+    .delete-marker-btn {
+      margin-top: 10px; padding: 8px 20px; background: #ff0000; color: #fff;
+      border: 2px solid #ff0000; border-radius: 20px; cursor: pointer;
+      font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700;
+      box-shadow: 0 0 20px rgba(255,0,0,0.5); transition: 0.2s;
+      display: none;
+    }
+    .admin-mode .delete-marker-btn {display: inline-block;}
+    .delete-marker-btn:hover {
+      background: #cc0000; transform: scale(1.05); box-shadow: 0 0 30px rgba(255,0,0,0.8);
+    }
+    
+    #adminToggle {
+      position: fixed; top: 20px; right: 20px; z-index: 150;
+      padding: 10px 20px; background: rgba(0,0,0,0.9); border: 2px solid #00ff41;
+      border-radius: 20px; color: #00ff41; font-family: 'Orbitron', sans-serif;
+      font-size: 12px; cursor: pointer; opacity: 0.3; transition: 0.3s;
+    }
+    #adminToggle:hover {opacity: 1; box-shadow: 0 0 20px #00ff41;}
+    #adminToggle.active {background: #00ff41; color: #000; opacity: 1;}
 
     .map-click-pulse {
       position: absolute; width: 60px; height: 60px; background: rgba(0,255,65,0.4);
@@ -275,6 +296,8 @@
 <body>
 
   <div id="map"></div>
+
+  <div id="adminToggle">ADMIN MODE</div>
 
   <div class="title-bar">
     <div id="ritualLogo"><img src="ritualnet-logo.png" draggable="false"></div>
@@ -346,6 +369,22 @@
       const recent = document.getElementById('recent');
       let clickedPos = null;
       let logoClicks = 0;
+      let adminMode = false;
+
+      // Admin toggle
+      document.getElementById('adminToggle').onclick = function() {
+        adminMode = !adminMode;
+        this.classList.toggle('active', adminMode);
+        document.body.classList.toggle('admin-mode', adminMode);
+        this.textContent = adminMode ? 'ADMIN: ON' : 'ADMIN MODE';
+        
+        // Refresh all popups to show/hide delete buttons
+        markers.eachLayer(m => {
+          if (m.options.data) {
+            updateMarkerPopup(m);
+          }
+        });
+      };
 
       function getSize() {
         const z = map.getZoom();
@@ -374,12 +413,59 @@
       function addMarkerToMap(s) {
         const icon = createIcon(s.avatar || 'ritualnet-logo.png');
         const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
-        m.bindPopup(`
-          <div><img src="${s.avatar || 'ritualnet-logo.png'}">
-          <b>@${s.name}</b><i>"${s.pledge}"</i></div>
-        `);
+        updateMarkerPopup(m);
         return m;
       }
+
+      function updateMarkerPopup(marker) {
+        const s = marker.options.data;
+        if (!s) return;
+        
+        const deleteBtn = adminMode ? 
+          `<button class="delete-marker-btn" onclick="window.deleteMarker('${s.id}')">DELETE</button>` : '';
+        
+        marker.bindPopup(`
+          <div>
+            <img src="${s.avatar || 'ritualnet-logo.png'}">
+            <b>@${s.name}</b>
+            <i>"${s.pledge}"</i>
+            ${deleteBtn}
+          </div>
+        `);
+      }
+
+      // Global delete function
+      window.deleteMarker = async function(markerId) {
+        if (!adminMode) return;
+        
+        if (!confirm('Delete this summoning permanently?')) return;
+        
+        try {
+          // Delete from database
+          const { error } = await supabase
+            .from('summonings')
+            .delete()
+            .eq('id', markerId);
+          
+          if (error) throw error;
+          
+          // Remove marker from map
+          markers.eachLayer(m => {
+            if (m.options.data?.id === markerId) {
+              markers.removeLayer(m);
+            }
+          });
+          
+          // Remove from recent list
+          const entry = document.querySelector(`.entry[data-id="${markerId}"]`);
+          if (entry) entry.remove();
+          
+          console.log('Deleted:', markerId);
+        } catch (e) {
+          alert('Failed to delete: ' + e.message);
+          console.error('Delete error:', e);
+        }
+      };
 
       function addToRecent(s, prepend = true) {
         // Check if already exists

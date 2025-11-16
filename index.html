@@ -322,16 +322,14 @@
     <button id="cancelReset">CANCEL</button>
   </div>
 
-  <!-- ===== merged JS: optimistic broadcast + realtime + instant UI + newest-on-top ===== -->
   <script>
+    /* ============ Map + UI setup ============ */
     const map = L.map('map', { zoomControl: false, attributionControl: false, minZoom: 2, maxZoom: 19 }).setView([10, 0], 2);
     L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
     const markers = L.layerGroup().addTo(map);
     const recent = document.getElementById('recent');
-    let clickedPos = null;
-    let logoClicks = 0;
-    let clickTimer = null;
+    let clickedPos = null, logoClicks = 0, clickTimer = null;
 
     function getSize() { const z = map.getZoom(); return z <= 3 ? 30 : z <= 5 ? 40 : z <= 7 ? 50 : 65; }
     function createIconElement(src) {
@@ -344,7 +342,7 @@
 
     map.on('zoomend', () => markers.eachLayer(m => { const data = m.options.data; if (data?.avatar) m.setIcon(createIcon(data.avatar)); }));
 
-    // defensive validators
+    /* ============ defensive validators & helpers ============ */
     function validLatLng(s) {
       return s && s.lat != null && s.lng != null && !Number.isNaN(Number(s.lat)) && !Number.isNaN(Number(s.lng));
     }
@@ -357,13 +355,9 @@
         if (!inner) return;
         requestAnimationFrame(() => {
           inner.style.transform = 'scale(1)';
-          inner.animate([
-            { transform: 'scale(0.92)' },
-            { transform: 'scale(1.06)' },
-            { transform: 'scale(1)' }
-          ], { duration: 420, easing: 'cubic-bezier(.2,.9,.2,1)' });
+          inner.animate([{ transform: 'scale(0.92)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'cubic-bezier(.2,.9,.2,1)' });
         });
-      } catch (e) { /* ignore */ }
+      } catch (e) {}
     }
 
     function showMapPulse(latlng) {
@@ -383,21 +377,18 @@
 
     function hasEntry(id) { return !!document.querySelector(`.entry[data-id="${id}"]`); }
 
-    function addSummoningToUI(s, isLocal = false) {
+    /* ============ addSummoningToUI: supports adding to top or bottom ============ */
+    // options: { toTop: boolean } — default: toTop=false (append)
+    function addSummoningToUI(s, isLocal = false, options = {}) {
       if (!s) return;
-      if (!validLatLng(s)) {
-        console.warn('Skipping summoning — invalid coords', s);
-        return;
-      }
+      if (!validLatLng(s)) { console.warn('Skipping summoning — invalid coords', s); return; }
       s.lat = Number(s.lat); s.lng = Number(s.lng);
 
       if (s.id && hasEntry(s.id)) return;
 
       const icon = createIcon(s.avatar || 'ritualnet-logo.png');
       const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
-
       m.bindPopup(`<div style="position:relative;text-align:center;"><img src="${s.avatar || 'ritualnet-logo.png'}"><b>@${s.name}</b><i>"${s.pledge}"</i></div>`);
-
       setTimeout(() => animateMarkerDom(m), 90);
 
       const entry = document.createElement('div');
@@ -405,8 +396,9 @@
       if (s.id) entry.dataset.id = s.id;
       entry.innerHTML = `<img src="${s.avatar || 'ritualnet-logo.png'}"><div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>`;
 
-      // newest on top for everyone
-      recent.prepend(entry);
+      // decide top or bottom
+      const toTop = Boolean(options.toTop);
+      if (toTop) recent.prepend(entry); else recent.appendChild(entry);
 
       if (isLocal) {
         entry.style.boxShadow = '0 0 80px rgba(0,255,65,0.9)';
@@ -422,26 +414,27 @@
       }
     }
 
-    // safe loadAll with localStorage minimal snapshot
+    /* ============ loadAll: append in descending order so newest stays on top ============ */
     async function loadAll() {
       try {
         const { data, error } = await window.__supabase
           .from('summonings')
           .select('*')
-          .order('timestamp', { ascending: false })
+          .order('timestamp', { ascending: false }) // newest first
           .limit(100);
         if (error) { console.error(error); return; }
 
-        // store minimal snapshot to avoid quota problems
+        // store minimal snapshot (avoid localStorage quota)
         try {
           const minimal = (data || []).slice(0, 50).map(d => ({ id: d.id, name: d.name, lat: d.lat, lng: d.lng, timestamp: d.timestamp }));
           localStorage.setItem('ritualnet_summonings', JSON.stringify(minimal));
-        } catch (e) {
-          console.warn('Could not save summonings to localStorage (might be quota):', e);
-        }
+        } catch (e) { console.warn('Could not save summonings to localStorage (might be quota):', e); }
 
         markers.clearLayers(); recent.innerHTML = '';
-        (data || []).forEach(s => addSummoningToUI(s));
+
+        // data is sorted newest->oldest; append keeps newest at top
+        (data || []).forEach(s => addSummoningToUI(s, false, { toTop: false }));
+
         console.log('[RITUALNET] loaded', (data || []).length, 'summonings');
       } catch (err) {
         console.warn('Load failed:', err && err.message ? err.message : err);
@@ -450,7 +443,7 @@
 
     loadAll();
 
-    // Realtime with heartbeat, broadcast listener & polling fallback (1s)
+    /* ============ Realtime + broadcast handling ============ */
     let ritualChannel = null;
     let heartbeat = null;
     let realtimeConnected = false;
@@ -466,19 +459,20 @@
 
         ritualChannel = window.__supabase.channel('summonings-channel', { config: { broadcast: { self: false } } });
 
-        // DB INSERT events
+        // DB INSERT events (backup)
         ritualChannel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, payload => {
           const row = payload.new || payload.record || payload;
-          addSummoningToUI(row, false);
+          // add to top so newest visible immediately
+          addSummoningToUI(row, false, { toTop: true });
           realtimeConnected = true;
-          console.log('[RITUALNET] realtime insert event', row);
+          console.log('[RITUALNET] realtime INSERT event', row);
         });
 
         // FAST BROADCAST: other clients' broadcasts for instant UI
         ritualChannel.on('broadcast', { event: 'new_summon' }, (payload) => {
           try {
             if (payload && typeof payload === 'object') {
-              addSummoningToUI(payload, false);
+              addSummoningToUI(payload, false, { toTop: true });
               console.log('[RITUALNET] broadcast new_summon received', payload);
             }
           } catch (e) { console.warn('broadcast handling error', e); }
@@ -495,12 +489,13 @@
           }
         });
 
+        // if not connected quickly, start quick polling fallback
         setTimeout(() => {
           if (!realtimeConnected && !pollingInterval) {
             console.warn('[RITUALNET] realtime not connected — starting polling fallback (1s)');
             pollingInterval = setInterval(() => { loadAll(); }, 1000);
           }
-        }, 2500);
+        }, 2000);
       } catch (e) {
         console.error('[RITUALNET] connectRealtime error', e);
         if (!pollingInterval) pollingInterval = setInterval(() => loadAll(), 1000);
@@ -510,10 +505,34 @@
     connectRealtime();
     window.addEventListener('online', connectRealtime);
 
-    // Map click -> modal
+    /* ============ helper to send broadcast, with retry if channel not ready ============ */
+    async function sendBroadcast(payload, tries = 0) {
+      try {
+        if (ritualChannel && typeof ritualChannel.send === 'function') {
+          await ritualChannel.send({ type: 'broadcast', event: 'new_summon', payload }).catch(err => { throw err; });
+          return true;
+        } else {
+          // channel not ready — try to quickly create a transient channel and send once
+          const tempCh = window.__supabase.channel('summonings-channel-temp-' + Math.random().toString(36).slice(2), { config: { broadcast: { self: false } } });
+          await tempCh.subscribe();
+          await tempCh.send({ type: 'broadcast', event: 'new_summon', payload }).catch(err => { throw err; });
+          try { window.__supabase.removeChannel(tempCh); } catch(_) {}
+          return true;
+        }
+      } catch (err) {
+        if (tries < 2) {
+          // short retry
+          setTimeout(() => sendBroadcast(payload, tries + 1), 300);
+        } else {
+          console.warn('[RITUALNET] broadcast failed after retries', err);
+          return false;
+        }
+      }
+    }
+
+    /* ============ Map click -> modal ============ */
     map.on('click', function(e) {
       clickedPos = e.latlng;
-
       const pulse = document.createElement('div');
       pulse.className = 'map-click-pulse';
       pulse.style.left = (e.containerPoint.x - 30) + 'px';
@@ -546,7 +565,7 @@
       }
     };
 
-    // Join button: insert -> immediate add + broadcast
+    /* ============ Join: insert -> immediate local add (top) -> broadcast ============ */
     document.querySelector('.join-btn').onclick = async () => {
       const avatar = document.getElementById('avatarPreview').src;
       const name = document.getElementById('username').value.trim() || "ritualist";
@@ -565,28 +584,16 @@
         setTimeout(() => {
           success.classList.remove('active');
           if (clickedPos && clickedPos.lat != null && clickedPos.lng != null) {
-            map.flyTo(clickedPos, 10, { duration: 1.5 });
+            map.flyTo(clickedPos, 10, { duration: 1.2 });
           }
-        }, 1200);
+        }, 1100);
 
         const row = (data && data[0]) ? data[0] : { ...newSummon, id: `tmp-${Date.now()}` };
-        // add locally immediately (so the user sees it)
-        addSummoningToUI(row, true);
+        // add locally immediately at top
+        addSummoningToUI(row, true, { toTop: true });
 
-        // send a fast broadcast so other clients see it instantly
-        try {
-          if (ritualChannel) {
-            ritualChannel.send({
-              type: 'broadcast',
-              event: 'new_summon',
-              payload: row
-            }).catch(err => {
-              console.warn('[RITUALNET] broadcast send failed', err);
-            });
-          }
-        } catch (e) {
-          console.warn('[RITUALNET] broadcast error', e);
-        }
+        // broadcast for others (with a retry if channel not ready)
+        sendBroadcast(row);
 
       } catch (err) {
         console.error('[RITUALNET] join error', err);
@@ -594,6 +601,7 @@
       }
     };
 
+    /* ============ reset secret + handlers ============ */
     document.getElementById('ritualLogo').onclick = () => {
       logoClicks++;
       if (clickTimer) clearTimeout(clickTimer);
@@ -621,7 +629,7 @@
       document.getElementById('resetConfirm').style.display = 'none';
     };
 
-    console.log('[RITUALNET] initialized. Open DevTools Console to see realtime / polling logs.');
+    console.log('[RITUALNET] initialized — broadcasting enabled. Open DevTools for logs.');
   </script>
 </body>
 </html>

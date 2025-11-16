@@ -275,15 +275,6 @@
     .delete-marker-btn:hover {
       background: #cc0000; transform: scale(1.05); box-shadow: 0 0 30px rgba(255,0,0,0.8);
     }
-    
-    #adminToggle {
-      position: fixed; top: 20px; right: 20px; z-index: 150;
-      padding: 10px 20px; background: rgba(0,0,0,0.9); border: 2px solid #00ff41;
-      border-radius: 20px; color: #00ff41; font-family: 'Orbitron', sans-serif;
-      font-size: 12px; cursor: pointer; opacity: 0.3; transition: 0.3s;
-    }
-    #adminToggle:hover {opacity: 1; box-shadow: 0 0 20px #00ff41;}
-    #adminToggle.active {background: #00ff41; color: #000; opacity: 1;}
 
     .map-click-pulse {
       position: absolute; width: 60px; height: 60px; background: rgba(0,255,65,0.4);
@@ -296,8 +287,6 @@
 <body>
 
   <div id="map"></div>
-
-  <div id="adminToggle">ADMIN MODE</div>
 
   <div class="title-bar">
     <div id="ritualLogo"><img src="ritualnet-logo.png" draggable="false"></div>
@@ -370,21 +359,7 @@
       let clickedPos = null;
       let logoClicks = 0;
       let adminMode = false;
-
-      // Admin toggle
-      document.getElementById('adminToggle').onclick = function() {
-        adminMode = !adminMode;
-        this.classList.toggle('active', adminMode);
-        document.body.classList.toggle('admin-mode', adminMode);
-        this.textContent = adminMode ? 'ADMIN: ON' : 'ADMIN MODE';
-        
-        // Refresh all popups to show/hide delete buttons
-        markers.eachLayer(m => {
-          if (m.options.data) {
-            updateMarkerPopup(m);
-          }
-        });
-      };
+      let adminClickTimer = null;
 
       function getSize() {
         const z = map.getZoom();
@@ -622,11 +597,37 @@
 
       document.getElementById('ritualLogo').onclick = () => {
         logoClicks++;
+        if (adminClickTimer) clearTimeout(adminClickTimer);
+        
         if (logoClicks === 7) {
+          // Toggle admin mode
+          adminMode = !adminMode;
+          document.body.classList.toggle('admin-mode', adminMode);
+          
+          // Visual feedback
+          const logo = document.getElementById('ritualLogo');
+          if (adminMode) {
+            logo.style.filter = 'drop-shadow(0 0 40px #ff0000)';
+            alert('🔴 ADMIN MODE ACTIVATED\n\nClick any marker to see DELETE option.');
+          } else {
+            logo.style.filter = '';
+            alert('✅ Admin mode deactivated');
+          }
+          
+          // Refresh all popups to show/hide delete buttons
+          markers.eachLayer(m => {
+            if (m.options.data) {
+              updateMarkerPopup(m);
+            }
+          });
+          
+          logoClicks = 0;
+        } else if (logoClicks === 14) {
+          // 14 clicks = show reset confirmation
           document.getElementById('resetConfirm').style.display = 'flex';
           logoClicks = 0;
         } else {
-          setTimeout(() => logoClicks = 0, 3000);
+          adminClickTimer = setTimeout(() => { logoClicks = 0; }, 3000);
         }
       };
 

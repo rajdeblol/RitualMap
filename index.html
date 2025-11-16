@@ -177,7 +177,7 @@
       z-index: 10;
       overflow-y: auto;
       display: flex;
-      flex-direction: column; /* TOP → BOTTOM */
+      flex-direction: column;
       scroll-behavior: smooth;
       overscroll-behavior: contain;
       padding-bottom: env(safe-area-inset-bottom);
@@ -371,22 +371,31 @@
         <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
       `;
 
-      // INSERT AT TOP
+      // INSERT AT TOP — WORKS FOR EVERYONE
       recent.insertBefore(entry, recent.firstChild);
     }
 
+    // LOAD FRESH EVERY TIME — NO CACHING
     async function loadAll() {
-      const { data, error } = await window.__supabase.from('summonings').select('*').order('timestamp', { ascending: false }).limit(100);
+      const { data, error } = await window.__supabase
+        .from('summonings')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(100);
+
       if (error) { console.error(error); return; }
 
-      localStorage.setItem('ritualnet_summonings', JSON.stringify(data));
-      markers.clearLayers(); recent.innerHTML = '';
+      markers.clearLayers();
+      recent.innerHTML = '';
 
       data.forEach(s => addSummoningToUI(s));
     }
 
+    // REFRESH EVERY 5 SECONDS
     loadAll();
+    setInterval(loadAll, 5000);
 
+    // REAL-TIME INSERT → ADD AT TOP
     window.__supabase
       .channel('summonings-channel')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'summonings' }, payload => {
@@ -451,7 +460,7 @@
         map.flyTo(clickedPos, 10, { duration: 1.8 });
       }, 3200);
 
-      addSummoningToUI(data[0]);
+      // New summoning will appear at top via real-time
     };
 
     // 7-CLICK RESET
@@ -470,7 +479,6 @@
       const { error } = await window.__supabase.from('summonings').delete().gt('id', 0);
       if (error) console.error(error);
       
-      localStorage.removeItem('ritualnet_summonings');
       markers.clearLayers();
       recent.innerHTML = '';
       document.getElementById('resetConfirm').style.display = 'none';

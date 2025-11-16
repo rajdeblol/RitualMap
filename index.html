@@ -67,6 +67,33 @@
       white-space: nowrap; z-index: 100;
     }
 
+    .counter-box {
+      position: fixed; top: 20px; right: 20px; z-index: 100;
+      background: rgba(0,0,0,0.95); border: 3px solid #00ff41;
+      border-radius: 20px; padding: 15px 25px;
+      box-shadow: 0 0 40px rgba(0,255,65,0.6);
+      font-family: 'Orbitron', sans-serif;
+      text-align: center; min-width: 180px;
+      backdrop-filter: blur(10px);
+    }
+    .counter-box .count {
+      font-size: 48px; font-weight: 900;
+      background: linear-gradient(90deg, #00ff41, #00ff99);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px #00ff41;
+      line-height: 1; margin-bottom: 5px;
+      animation: countGlow 3s infinite alternate;
+    }
+    .counter-box .label {
+      font-size: 12px; color: #00ff88;
+      text-transform: uppercase; letter-spacing: 2px;
+      text-shadow: 0 0 10px #00ff41;
+    }
+    @keyframes countGlow {
+      0% {text-shadow: 0 0 20px #00ff41;}
+      100% {text-shadow: 0 0 40px #00ff41;}
+    }
+
     @keyframes glow {0%{filter: drop-shadow(0 0 30px #00ff41);}100%{filter: drop-shadow(0 0 70px #00ff41);}}
     @keyframes ritualPulse {
       0%,100%{opacity:0.15;transform:translate(-50%,-50%) scale(1);}
@@ -295,6 +322,11 @@
 
   <div class="subtitle">Let's Make The World Ritualize</div>
 
+  <div class="counter-box">
+    <div class="count" id="ritualCount">0</div>
+    <div class="label">RITUALIZED</div>
+  </div>
+
   <div class="panel">
     <h3>Recent Summonings</h3>
     <div id="recent"></div>
@@ -356,10 +388,19 @@
 
       const markers = L.layerGroup().addTo(map);
       const recent = document.getElementById('recent');
+      const countDisplay = document.getElementById('ritualCount');
       let clickedPos = null;
       let logoClicks = 0;
       let adminMode = false;
       let adminClickTimer = null;
+      let totalCount = 0;
+
+      function updateCounter(count) {
+        totalCount = count;
+        countDisplay.textContent = count;
+      }
+
+      console.log('🚀 RITUALNET loading...');
 
       function getSize() {
         const z = map.getZoom();
@@ -435,6 +476,8 @@
           const entry = document.querySelector(`.entry[data-id="${markerId}"]`);
           if (entry) entry.remove();
           
+          updateCounter(Math.max(0, totalCount - 1));
+          
           console.log('Deleted:', markerId);
         } catch (e) {
           alert('Failed to delete: ' + e.message);
@@ -473,6 +516,7 @@
                 addMarkerToMap(s);
                 addToRecent(s, false);
               });
+              updateCounter(cachedData.data.length);
             }
           }
         } catch (e) {
@@ -491,6 +535,9 @@
           
           if (data && data.length > 0) {
             console.log('🔄 Fresh data loaded:', data.length, 'markers');
+            
+            // Update counter with fresh count
+            updateCounter(data.length);
             
             // Update cache
             try {
@@ -528,6 +575,8 @@
 
       loadAll();
 
+      console.log('🔗 Setting up realtime...');
+
       // Realtime subscription
       const channel = supabase.channel('summonings-realtime')
         .on('postgres_changes', { 
@@ -538,11 +587,15 @@
           const row = payload.new;
           // Check if not already displayed
           if (!document.querySelector(`.entry[data-id="${row.id}"]`)) {
+            console.log('⚡ New summoning received:', row.id);
             addMarkerToMap(row);
             addToRecent(row, true); // Prepend new entries
+            updateCounter(totalCount + 1);
           }
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.log('📡 Realtime status:', status);
+        });
 
       // UI
       map.on('click', e => {
@@ -598,6 +651,7 @@
         // INSTANT: Add marker and entry with NO delay
         const marker = addMarkerToMap(newSummon);
         addToRecent(newSummon, true);
+        updateCounter(totalCount + 1);
 
         // Close modal immediately
         closeModal();

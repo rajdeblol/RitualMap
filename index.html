@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>RITUALNET</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -10,9 +10,11 @@
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- Supabase Init (replaces Firebase) -->
+  <!-- Supabase Init -->
   <script>
-    const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpgv.supabase.co';
+    const SUPABASE_URL = 'https://xgttfiqewnwpqguhbpg
+
+v.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndHRmaXFld253cHFndWhicGd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxOTY1ODgsImV4cCI6MjA3ODc3MjU4OH0.zVK46pTGH0_Ruu20s35ep8NnsQd2ROenG_EuWezXiWg';
     const { createClient } = window.supabase;
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -22,8 +24,21 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600&display=swap');
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{margin:0;background:#000;overflow:hidden;height:100vh;font-family:'Rajdhani',sans-serif;color:#0f0;}
-    #map{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;}
+    html, body {
+      margin:0;
+      padding:0;
+      background:#000;
+      overflow:hidden;
+      height:100dvh; /* MOBILE FIX: Full viewport height */
+      width:100vw;
+      font-family:'Rajdhani',sans-serif;
+      color:#0f0;
+    }
+    #map{
+      position:absolute;
+      top:0; left:0; width:100%; height:100dvh; /* FULL HEIGHT */
+      z-index:1;
+    }
     .leaflet-control-zoom, .leaflet-control-attribution{display:none!important;}
 
     /* TITLE BAR */
@@ -54,7 +69,6 @@
       text-shadow:0 0 60px #00ff4188;letter-spacing:12px;cursor:pointer;
       position:relative;
     }
-    /* SAME EXACT PULSE AS LOGO */
     .title-text::before{
       content:'RITUALNET';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
       font-size:56px;letter-spacing:12px;opacity:0.18;
@@ -63,7 +77,6 @@
       animation:ritualPulse 6s infinite ease-in-out;z-index:-1;
     }
 
-    /* ONE LINE ONLY — EXACTLY UNDER TITLE */
     .subtitle{
       position:absolute;top:100px;left:50%;transform:translateX(-50%);
       font-size:16px;letter-spacing:2px;color:#00ff88;
@@ -77,9 +90,9 @@
       50%{opacity:0.25;transform:translate(-50%,-50%) scale(1.08);}
     }
 
-    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.98);backdrop-filter:blur(20px);
-      display:none;align-items:center;justify-content:center;z-index:200;}
-    .card{width:430px;background:#000;padding:50px 40px;border:3px solid #00ff41;border-radius:30px;
+    .modal{position:fixed;top:0;left:0;width:100%;height:100dvh;background:rgba(0,0,0,0.98);backdrop-filter:blur(20px);
+      display:none;align-items:center;justify-content:center;z-index:200; padding: 20px;}
+    .card{width:430px;max-width:95vw;background:#000;padding:50px 40px;border:3px solid #00ff41;border-radius:30px;
       text-align:center;position:relative;box-shadow:0 0 100px rgba(0,255,65,0.7);}
     .close-btn{position:absolute;top:20px;right:25px;width:40px;height:40px;background:transparent;
       border:2px solid #00ff41;border-radius:50%;color:#00ff41;font-size:28px;cursor:pointer;}
@@ -106,9 +119,8 @@
       font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;cursor:pointer;box-shadow:0 0 60px #00ff41;transition:0.4s;}
     .join-btn:hover{transform:scale(1.1);box-shadow:0 0 100px #00ff41;}
 
-    /* RESTORED ORIGINAL "YOU ARE RITUALIZED" ANIMATION */
     .success{
-      position:fixed;top:0;left:0;width:100%;height:100%;background:#000;
+      position:fixed;top:0;left:0;width:100%;height:100dvh;background:#000;
       display:none;align-items:center;justify-content:center;flex-direction:column;
       z-index:300;color:#00ff41;text-align:center;opacity:0;
       transition:opacity 0.6s ease;
@@ -135,12 +147,23 @@
     }
     @keyframes fadeIn{to{opacity:0.8;}}
 
-    /* PANEL */
+    /* PANEL — MOBILE FRIENDLY, SCROLLABLE, LATEST 3 VISIBLE */
     .panel{
-      position:absolute;left:20px;bottom:20px;width:380px;max-height:calc(100vh - 180px);
-      background:#000;border:3px solid #00ff41;border-radius:25px;
-      padding:20px;box-shadow:0 0 80px rgba(0,255,65,0.6);z-index:10;
-      overflow-y:auto;display:flex;flex-direction:column;
+      position:absolute;
+      left:20px; bottom:20px;
+      width:380px; max-width:calc(100vw - 40px);
+      max-height:70vh;
+      background:#000;
+      border:3px solid #00ff41;
+      border-radius:25px;
+      padding:20px;
+      box-shadow:0 0 80px rgba(0,255,65,0.6);
+      z-index:10;
+      overflow-y:auto;
+      display:flex; flex-direction:column;
+      /* Smooth scroll + snap */
+      scroll-behavior: smooth;
+      overscroll-behavior: contain;
     }
     .panel h3{
       font-family:'Orbitron',sans-serif;color:#00ff41;font-size:28px;
@@ -152,6 +175,7 @@
       display:flex;align-items:center;margin:12px 0;padding:14px;
       background:rgba(0,255,65,0.08);border:2px solid #00ff41;
       border-radius:20px;position:relative;flex-shrink:0;
+      scroll-snap-align: start;
     }
     .entry img{
       width:48px;height:48px;border-radius:50%;border:3px solid #00ff41;
@@ -175,7 +199,7 @@
     }
 
     #resetConfirm{
-      position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.98);
+      position:fixed;top:0;left:0;width:100%;height:100dvh;background:rgba(0,0,0,0.98);
       backdrop-filter:blur(20px);display:none;align-items:center;justify-content:center;
       flex-direction:column;z-index:400;color:#00ff41;text-align:center;font-family:'Orbitron',sans-serif;
     }
@@ -186,7 +210,6 @@
     #confirmReset{background:#00ff41;color:#000;box-shadow:0 0 60px #00ff41;}
     #cancelReset{background:#333;color:#00ff41;border:2px solid #00ff41;}
 
-    /* POPUP */
     .leaflet-popup-content-wrapper {
       background: #000 !important; color: #0f0 !important;
       border: 3px solid #00ff41 !important; border-radius: 20px !important;
@@ -215,22 +238,18 @@
 
   <div id="map"></div>
 
-  <!-- TITLE BAR -->
   <div class="title-bar">
     <div id="ritualLogo"><img src="ritualnet-logo.png"></div>
     <div class="title-text" id="titleLink">RITUALNET</div>
   </div>
 
-  <!-- ONE LINE ONLY -->
   <div class="subtitle">Let’s Make The World Ritualize</div>
 
-  <!-- PANEL -->
   <div class="panel">
     <h3>Recent Summonings</h3>
-    <div id="recent"></div>
+    <div id="recent" style="scroll-snap-type: y mandatory;"></div>
   </div>
 
-  <!-- MODAL -->
   <div class="modal" id="ritualModal">
     <div class="card">
       <div class="close-btn" id="closeBtn">X</div>
@@ -244,14 +263,12 @@
     </div>
   </div>
 
-  <!-- SUCCESS — ORIGINAL ANIMATION RESTORED -->
   <div class="success" id="success">
     <div class="ritual-circle"></div>
     <h1>YOU ARE RITUALIZED</h1>
     <p>The circle grows stronger.</p>
   </div>
 
-  <!-- RESET CONFIRM -->
   <div id="resetConfirm">
     <div>RESET THE CIRCLE?</div>
     <button id="confirmReset">BURN IT ALL</button>
@@ -294,21 +311,17 @@
     });
 
     async function loadAll() {
-      const summonings = JSON.parse(localStorage.getItem('ritualnet_summonings') || '[]');
-      markers.clearLayers(); recent.innerHTML = '';
-
-      // Load from Supabase
       const { data, error } = await window.__supabase.from('summonings').select('*').order('timestamp', { ascending: false });
       if (error) {
         console.error('Supabase error:', error);
-        // fallback to localStorage
-      } else if (data) {
-        localStorage.setItem('ritualnet_summonings', JSON.stringify(data));
-        summonings.length = 0;
-        summonings.push(...data);
+        return;
       }
 
-      summonings.slice(-10).reverse().forEach(s => {
+      localStorage.setItem('ritualnet_summonings', JSON.stringify(data));
+      markers.clearLayers(); recent.innerHTML = '';
+
+      // Show all in scrollable list, latest 3 visible by default
+      data.forEach(s => {
         const icon = createIcon(s.avatar || 'ritualnet-logo.png');
         const m = L.marker([s.lat, s.lng], { icon, data: s }).addTo(markers);
 
@@ -332,12 +345,9 @@
 
     loadAll();
 
-    // Realtime listener
     window.__supabase
       .channel('summonings-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'summonings' }, payload => {
-        loadAll();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'summonings' }, () => loadAll())
       .subscribe();
 
     document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
@@ -348,6 +358,7 @@
       document.getElementById('avatarPreview').src = 'ritualnet-logo.png';
       document.getElementById('username').value = '';
       document.getElementById('pledge').value = '';
+      setTimeout(() => document.getElementById('username').focus(), 300);
     });
 
     const closeModal = () => {
@@ -376,7 +387,6 @@
 
       const newSummon = { name, pledge, avatar, lat: clickedPos.lat, lng: clickedPos.lng, timestamp: Date.now() };
 
-      // Insert into Supabase
       const { error } = await window.__supabase.from('summonings').insert(newSummon);
       if (error) {
         console.error('Insert failed:', error);

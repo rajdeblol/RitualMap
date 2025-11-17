@@ -309,46 +309,6 @@
       animation: clickPulse 0.6s ease-out forwards;
     }
     @keyframes clickPulse {0% {transform: scale(0); opacity: 1;}100% {transform: scale(3); opacity: 0;}}
-
-    /* Mobile optimization */
-    @media (max-width: 768px) {
-      .counter-box {
-        top: auto; bottom: calc(260px + env(safe-area-inset-bottom));
-        right: 15px; left: auto;
-        min-width: 120px; padding: 10px 15px;
-        border-width: 2px;
-      }
-      .counter-box .count {font-size: 32px;}
-      .counter-box .label {font-size: 10px; letter-spacing: 1px;}
-      
-      .title-bar {height: 80px; gap: 10px; padding: 5px;}
-      #ritualLogo {width: 50px; height: 50px;}
-      .title-text {font-size: clamp(24px, 6vw, 36px); letter-spacing: 4px;}
-      .title-text::before {letter-spacing: 4px;}
-      .subtitle {top: calc(80px + env(safe-area-inset-top)); font-size: 11px; letter-spacing: 1px;}
-      
-      .panel {
-        left: 10px; bottom: 10px; width: 280px; max-width: calc(100vw - 20px);
-        max-height: 200px; padding: 10px; border-width: 2px;
-      }
-      .panel h3 {font-size: 14px; padding: 6px;}
-      .entry {padding: 8px; margin: 6px 0; border-width: 2px;}
-      .entry img {width: 32px; height: 32px;}
-      .entry .name {font-size: 12px;}
-      .entry .pledge {font-size: 11px;}
-      
-      .card {padding: 30px 20px; border-width: 2px;}
-      .card h2 {font-size: 28px; letter-spacing: 4px; margin-bottom: 20px;}
-      .avatar-circle {width: 100px; height: 100px; border-width: 4px; margin: 20px auto;}
-      .upload-btn, .input-field, .pledge-field {padding: 14px; margin: 12px 0; font-size: 16px; border-width: 2px;}
-      .pledge-field {height: 80px; padding: 14px;}
-      .join-btn {padding: 16px 50px; font-size: 20px;}
-      .close-btn {top: 15px; right: 15px; width: 35px; height: 35px; font-size: 24px;}
-      
-      .success h1 {font-size: clamp(32px, 10vw, 48px);}
-      .success p {font-size: clamp(14px, 3.5vw, 18px);}
-      .ritual-circle {width: 150px; height: 150px;}
-    }
   </style>
 </head>
 <body>
@@ -403,83 +363,8 @@
     const { createClient } = window.supabase;
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Cache settings
-    const CACHE_KEY = 'ritualnet_cache_v2';
-    const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
-    const MAX_MARKERS = 25; // Reduced from 100 to save IO
-    
-    // Anti-spam settings - Fingerprint based
-    const USER_FINGERPRINT_KEY = 'ritualnet_fingerprint';
-    const RATE_LIMIT_KEY = 'ritualnet_last_join';
-    const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes cooldown between rituals
-    const MAX_PER_DAY_KEY = 'ritualnet_daily_count';
-    const MAX_PER_DAY = 2; // Max 2 rituals per user per day
-
-    // Generate browser fingerprint
-    function getBrowserFingerprint() {
-      try {
-        const existing = localStorage.getItem(USER_FINGERPRINT_KEY);
-        if (existing) return existing;
-        
-        // Create unique fingerprint
-        const fingerprint = `${navigator.userAgent}_${screen.width}x${screen.height}_${navigator.language}_${new Date().getTimezoneOffset()}_${Math.random().toString(36).substring(7)}`;
-        const hash = btoa(fingerprint).substring(0, 32);
-        localStorage.setItem(USER_FINGERPRINT_KEY, hash);
-        return hash;
-      } catch (e) {
-        return 'anonymous';
-      }
-    }
-
-    // Helper: Check if user can join
-    function canUserJoin() {
-      try {
-        const now = Date.now();
-        
-        // Check cooldown (5 minutes)
-        const lastJoin = parseInt(localStorage.getItem(RATE_LIMIT_KEY) || '0');
-        const timeSinceLastJoin = now - lastJoin;
-        if (timeSinceLastJoin < COOLDOWN_MS) {
-          const minutesLeft = Math.ceil((COOLDOWN_MS - timeSinceLastJoin) / 60000);
-          const secondsLeft = Math.ceil(((COOLDOWN_MS - timeSinceLastJoin) % 60000) / 1000);
-          return { allowed: false, reason: `Cooldown active! Please wait ${minutesLeft}m ${secondsLeft}s before joining again.\n\nThis prevents spam and keeps the map clean. ✨` };
-        }
-        
-        // Check daily limit (2 per day)
-        const dailyData = JSON.parse(localStorage.getItem(MAX_PER_DAY_KEY) || '{"count":0,"date":""}');
-        const today = new Date().toDateString();
-        
-        if (dailyData.date === today) {
-          if (dailyData.count >= MAX_PER_DAY) {
-            return { allowed: false, reason: `Daily limit reached! 🎯\n\nYou can join ${MAX_PER_DAY} times per day to prevent spam.\n\nCome back tomorrow to ritualize again!` };
-          }
-        } else {
-          // New day, reset counter
-          dailyData.count = 0;
-          dailyData.date = today;
-        }
-        
-        return { allowed: true, dailyData, fingerprint: getBrowserFingerprint() };
-      } catch (e) {
-        console.warn('Rate limit check failed:', e);
-        return { allowed: true, fingerprint: getBrowserFingerprint() }; // Allow if check fails
-      }
-    }
-    
-    // Helper: Record join
-    function recordJoin(dailyData) {
-      try {
-        localStorage.setItem(RATE_LIMIT_KEY, Date.now().toString());
-        if (dailyData) {
-          dailyData.count++;
-          localStorage.setItem(MAX_PER_DAY_KEY, JSON.stringify(dailyData));
-        }
-      } catch (e) {
-        console.warn('Failed to record join:', e);
-      }
-    }
-
     window.addEventListener('load', () => {
+      // More flexible bounds - allows more panning
       const bounds = L.latLngBounds([[-89, -200], [89, 200]]);
 
       const map = L.map('map', { 
@@ -488,16 +373,15 @@
         minZoom: 2,
         maxZoom: 19,
         maxBounds: bounds,
-        maxBoundsViscosity: 0.5,
+        maxBoundsViscosity: 0.5, // More flexible (was 1)
         worldCopyJump: false,
-        inertia: true,
-        inertiaDeceleration: 2000,
+        inertia: true, // Smooth panning
+        inertiaDeceleration: 2000, // Faster deceleration
         zoomAnimation: true
       }).setView([10, 0], 2);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-        maxZoom: 19,
-        attribution: ''
+      L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', { 
+        maxZoom: 19 
       }).addTo(map);
 
       setTimeout(() => map.invalidateSize(), 50);
@@ -515,6 +399,8 @@
         totalCount = count;
         countDisplay.textContent = count;
       }
+
+      console.log('🚀 RITUALNET loading...');
 
       function getSize() {
         const z = map.getZoom();
@@ -564,19 +450,297 @@
         `);
       }
 
+      // Global delete function
       window.deleteMarker = async function(markerId) {
         if (!adminMode) return;
+        
         if (!confirm('Delete this summoning permanently?')) return;
         
         try {
-          const { error } = await supabase.from('summonings').delete().eq('id', markerId);
+          // Delete from database
+          const { error } = await supabase
+            .from('summonings')
+            .delete()
+            .eq('id', markerId);
+          
           if (error) throw error;
           
+          // Remove marker from map
           markers.eachLayer(m => {
-            if (m.options.data?.id === markerId) markers.removeLayer(m);
+            if (m.options.data?.id === markerId) {
+              markers.removeLayer(m);
+            }
           });
           
+          // Remove from recent list
           const entry = document.querySelector(`.entry[data-id="${markerId}"]`);
           if (entry) entry.remove();
           
           updateCounter(Math.max(0, totalCount - 1));
+          
+          console.log('Deleted:', markerId);
+        } catch (e) {
+          alert('Failed to delete: ' + e.message);
+          console.error('Delete error:', e);
+        }
+      };
+
+      function addToRecent(s, prepend = true) {
+        // Check if already exists
+        if (s.id && document.querySelector(`.entry[data-id="${s.id}"]`)) return;
+        
+        const entry = document.createElement('div');
+        entry.className = 'entry';
+        if (s.id) entry.dataset.id = s.id;
+        entry.innerHTML = `
+          <img src="${s.avatar || 'ritualnet-logo.png'}">
+          <div><div class="name">@${s.name}</div><div class="pledge">"${s.pledge}"</div></div>
+        `;
+        
+        if (prepend) {
+          recent.insertBefore(entry, recent.firstChild);
+        } else {
+          recent.appendChild(entry);
+        }
+      }
+
+      async function loadAll() {
+        // INSTANT: Try to show cached data immediately (0ms)
+        try {
+          const cached = localStorage.getItem('ritualnet_cache');
+          if (cached) {
+            const cachedData = JSON.parse(cached);
+            if (cachedData && cachedData.data && Array.isArray(cachedData.data)) {
+              console.log('📦 Loading from cache:', cachedData.data.length, 'markers');
+              cachedData.data.forEach(s => {
+                addMarkerToMap(s);
+                addToRecent(s, false);
+              });
+              updateCounter(cachedData.data.length);
+            }
+          }
+        } catch (e) {
+          console.warn('Cache load failed:', e);
+        }
+
+        // BACKGROUND: Fetch fresh data without blocking
+        try {
+          const { data, error } = await supabase
+            .from('summonings')
+            .select('*')
+            .order('timestamp', { ascending: false })
+            .limit(100);
+          
+          if (error) throw error;
+          
+          if (data && data.length > 0) {
+            console.log('🔄 Fresh data loaded:', data.length, 'markers');
+            
+            // Update counter with fresh count
+            updateCounter(data.length);
+            
+            // Update cache
+            try {
+              localStorage.setItem('ritualnet_cache', JSON.stringify({ 
+                data: data.slice(0, 50),
+                timestamp: Date.now() 
+              }));
+            } catch (e) {
+              console.warn('Cache save failed:', e);
+            }
+            
+            // Only update if data actually changed
+            const existingIds = new Set();
+            markers.eachLayer(m => {
+              if (m.options.data?.id) existingIds.add(m.options.data.id);
+            });
+            
+            const hasChanges = data.some(s => !existingIds.has(s.id)) || 
+                               data.length !== existingIds.size;
+            
+            if (hasChanges) {
+              console.log('🔄 Data changed, refreshing UI');
+              markers.clearLayers();
+              recent.innerHTML = '';
+              data.forEach(s => {
+                addMarkerToMap(s);
+                addToRecent(s, false);
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Load error:', e);
+        }
+      }
+
+      loadAll();
+
+      console.log('🔗 Setting up realtime...');
+
+      // Realtime subscription
+      const channel = supabase.channel('summonings-realtime')
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'summonings' 
+        }, payload => {
+          const row = payload.new;
+          // Check if not already displayed
+          if (!document.querySelector(`.entry[data-id="${row.id}"]`)) {
+            console.log('⚡ New summoning received:', row.id);
+            addMarkerToMap(row);
+            addToRecent(row, true); // Prepend new entries
+            updateCounter(totalCount + 1);
+          }
+        })
+        .subscribe((status) => {
+          console.log('📡 Realtime status:', status);
+        });
+
+      // UI
+      map.on('click', e => {
+        clickedPos = e.latlng;
+        const modal = document.getElementById('ritualModal');
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('show'), 10);
+        document.getElementById('avatarPreview').src = 'ritualnet-logo.png';
+        document.getElementById('username').value = '';
+        document.getElementById('pledge').value = '';
+      });
+
+      document.getElementById('titleLink').onclick = () => window.open('https://x.com/ritualnet', '_blank');
+
+      const closeModal = () => {
+        const modal = document.getElementById('ritualModal');
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 200);
+      };
+
+      document.getElementById('closeBtn').onclick = closeModal;
+      document.querySelector('.modal').onclick = e => {
+        if (e.target.classList.contains('modal')) closeModal();
+      };
+
+      document.querySelector('.upload-btn').onclick = () => document.getElementById('avatarInput').click();
+      document.getElementById('avatarInput').onchange = e => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = ev => document.getElementById('avatarPreview').src = ev.target.result;
+          reader.readAsDataURL(file);
+        }
+      };
+
+      document.querySelector('.join-btn').onclick = () => {
+        const avatar = document.getElementById('avatarPreview').src;
+        const name = document.getElementById('username').value.trim() || "ritualist";
+        const pledge = document.getElementById('pledge').value.trim() || "I have joined.";
+        if (!clickedPos) return;
+
+        const tempId = 'temp-' + Date.now();
+        const newSummon = { 
+          id: tempId,
+          name, 
+          pledge, 
+          avatar, 
+          lat: clickedPos.lat, 
+          lng: clickedPos.lng, 
+          timestamp: Date.now() 
+        };
+
+        // INSTANT: Add marker and entry with NO delay
+        const marker = addMarkerToMap(newSummon);
+        addToRecent(newSummon, true);
+        updateCounter(totalCount + 1);
+
+        // Close modal immediately
+        closeModal();
+        
+        // Show success animation instantly
+        const success = document.getElementById('success');
+        success.classList.add('active');
+        
+        // Fly to location immediately
+        map.flyTo(clickedPos, 10, { duration: 0.6 });
+
+        // Hide success after 1s
+        setTimeout(() => success.classList.remove('active'), 1000);
+
+        // Save to database in background (fire and forget, no await)
+        supabase.from('summonings')
+          .insert({
+            name, 
+            pledge, 
+            avatar, 
+            lat: clickedPos.lat, 
+            lng: clickedPos.lng, 
+            timestamp: newSummon.timestamp
+          })
+          .select()
+          .then(({ data, error }) => {
+            if (error) {
+              console.warn('Save error:', error);
+            } else if (data && data[0]) {
+              // Update marker and entry with real ID
+              marker.options.data.id = data[0].id;
+              const tempEntry = document.querySelector(`.entry[data-id="${tempId}"]`);
+              if (tempEntry) {
+                tempEntry.dataset.id = data[0].id;
+              }
+              console.log('✅ Saved to database:', data[0].id);
+            }
+          })
+          .catch(err => {
+            console.error('Database save failed:', err);
+          });
+      };
+
+      document.getElementById('ritualLogo').onclick = () => {
+        logoClicks++;
+        if (adminClickTimer) clearTimeout(adminClickTimer);
+        
+        if (logoClicks === 7) {
+          // Toggle admin mode
+          adminMode = !adminMode;
+          document.body.classList.toggle('admin-mode', adminMode);
+          
+          // Visual feedback
+          const logo = document.getElementById('ritualLogo');
+          if (adminMode) {
+            logo.style.filter = 'drop-shadow(0 0 40px #ff0000)';
+            alert('🔴 ADMIN MODE ACTIVATED\n\nClick any marker to see DELETE option.');
+          } else {
+            logo.style.filter = '';
+            alert('✅ Admin mode deactivated');
+          }
+          
+          // Refresh all popups to show/hide delete buttons
+          markers.eachLayer(m => {
+            if (m.options.data) {
+              updateMarkerPopup(m);
+            }
+          });
+          
+          logoClicks = 0;
+        } else if (logoClicks === 14) {
+          // 14 clicks = show reset confirmation
+          document.getElementById('resetConfirm').style.display = 'flex';
+          logoClicks = 0;
+        } else {
+          adminClickTimer = setTimeout(() => { logoClicks = 0; }, 3000);
+        }
+      };
+
+      document.getElementById('confirmReset').onclick = async () => {
+        await supabase.from('summonings').delete().neq('timestamp', 0);
+        loadAll();
+        document.getElementById('resetConfirm').style.display = 'none';
+      };
+
+      document.getElementById('cancelReset').onclick = () => {
+        document.getElementById('resetConfirm').style.display = 'none';
+      };
+    });
+  </script>
+</body>
+</html>

@@ -94,6 +94,114 @@
       100% {text-shadow: 0 0 40px #00ff41;}
     }
 
+    /* Mobile optimization for counter */
+    @media (max-width: 768px) {
+      .counter-box {
+        top: auto; bottom: calc(260px + env(safe-area-inset-bottom));
+        right: 15px; left: auto;
+        min-width: 120px; padding: 10px 15px;
+        border-width: 2px;
+      }
+      .counter-box .count {
+        font-size: 32px;
+      }
+      .counter-box .label {
+        font-size: 10px; letter-spacing: 1px;
+      }
+    }
+
+    /* Mobile optimization for title bar */
+    @media (max-width: 768px) {
+      .title-bar {
+        height: 80px; gap: 10px; padding: 5px;
+      }
+      #ritualLogo {
+        width: 50px; height: 50px;
+      }
+      .title-text {
+        font-size: clamp(24px, 6vw, 36px);
+        letter-spacing: 4px;
+      }
+      .title-text::before {
+        letter-spacing: 4px;
+      }
+      .subtitle {
+        top: calc(80px + env(safe-area-inset-top));
+        font-size: 11px; letter-spacing: 1px;
+      }
+    }
+
+    /* Mobile optimization for panel */
+    @media (max-width: 768px) {
+      .panel {
+        left: 10px; bottom: 10px;
+        width: 280px; max-width: calc(100vw - 20px);
+        max-height: 200px; padding: 10px;
+        border-width: 2px;
+      }
+      .panel h3 {
+        font-size: 14px; padding: 6px;
+      }
+      .entry {
+        padding: 8px; margin: 6px 0;
+        border-width: 2px;
+      }
+      .entry img {
+        width: 32px; height: 32px;
+      }
+      .entry .name {
+        font-size: 12px;
+      }
+      .entry .pledge {
+        font-size: 11px;
+      }
+    }
+
+    /* Mobile optimization for modal */
+    @media (max-width: 768px) {
+      .card {
+        padding: 30px 20px;
+        border-width: 2px;
+      }
+      .card h2 {
+        font-size: 28px; letter-spacing: 4px;
+        margin-bottom: 20px;
+      }
+      .avatar-circle {
+        width: 100px; height: 100px;
+        border-width: 4px; margin: 20px auto;
+      }
+      .upload-btn, .input-field, .pledge-field {
+        padding: 14px; margin: 12px 0;
+        font-size: 16px; border-width: 2px;
+      }
+      .pledge-field {
+        height: 80px; padding: 14px;
+      }
+      .join-btn {
+        padding: 16px 50px;
+        font-size: 20px;
+      }
+      .close-btn {
+        top: 15px; right: 15px;
+        width: 35px; height: 35px;
+        font-size: 24px;
+      }
+    }
+
+    /* Mobile optimization for success screen */
+    @media (max-width: 768px) {
+      .success h1 {
+        font-size: clamp(32px, 10vw, 48px);
+      }
+      .success p {
+        font-size: clamp(14px, 3.5vw, 18px);
+      }
+      .ritual-circle {
+        width: 150px; height: 150px;
+      }
+    }
+
     @keyframes glow {0%{filter: drop-shadow(0 0 30px #00ff41);}100%{filter: drop-shadow(0 0 70px #00ff41);}}
     @keyframes ritualPulse {
       0%,100%{opacity:0.15;transform:translate(-50%,-50%) scale(1);}
